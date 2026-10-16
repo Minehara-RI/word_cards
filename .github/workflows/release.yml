@@ -35,7 +35,10 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - uses: android-actions/setup-android@v3
+      # Linux 运行器自带 Android SDK（ANDROID_HOME、platform-tools、build-tools 都在），
+      # 缺什么 Gradle 会按已接受的许可自己下载，这里不用再装一遍。
+      # 原先用的 android-actions/setup-android@v3 会因为 sdkmanager 里
+      # 已经没有 "tools" 这个包而直接失败。
 
       - uses: subosito/flutter-action@v2
         with:
