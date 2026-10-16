@@ -1,0 +1,30 @@
+# 统一换行符：仓库里一律 LF，检出到工作区时按平台。
+# 团队里只有 Windows 时最容易踩的坑就是「整文件都改了」其实只是 CRLF。
+* text=auto eol=lf
+
+# Windows 构建脚本与批处理必须是 CRLF，否则 cmd 解析会出问题
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# 脚本类显式声明语言，方便 GitHub 高亮与 diff
+*.ps1 text eol=crlf
+*.iss text eol=crlf
+
+# 二进制：不要动，也不要试图 diff
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.jar binary
+*.apk binary
+*.exe binary
+*.dll binary
+*.so binary
+*.ttf binary
+*.otf binary
+*.anki2 binary
+
+# 生成物不参与语言统计
+pubspec.lock linguist-generated=true
+*.lock linguist-generated=true
