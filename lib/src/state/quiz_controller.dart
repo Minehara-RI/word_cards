@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/ids.dart';
 import '../domain/models/answer_record.dart';
 import '../domain/models/app_settings.dart';
+import '../domain/models/quiz_direction.dart';
 import '../domain/models/word_card.dart';
 import '../logic/fsrs.dart';
 import '../logic/quiz.dart';
@@ -18,7 +19,9 @@ class QuizReviewItem {
   final AnswerRecord record;
 
   bool get correct => record.correct;
-  String get word => question.card.word;
+
+  /// 这一题的题面：正方向是单词，反方向是中文释义。
+  String get prompt => question.promptText;
 }
 
 enum QuizStatus {
@@ -49,6 +52,7 @@ class QuizState {
     this.remainingMs = 0,
     this.timeLimitMs = 0,
     this.revealMode = AnswerRevealMode.immediate,
+    this.direction = QuizDirection.wordToMeaning,
   });
 
   final QuizStatus status;
@@ -73,6 +77,10 @@ class QuizState {
 
   /// 本轮的正误显示时机。
   final AnswerRevealMode revealMode;
+
+  /// 本轮设的出题方向。**可能是 [QuizDirection.mixed]** ——
+  /// 混合模式下每一题具体考哪边看 current.direction。
+  final QuizDirection direction;
 
   /// 要不要**现在**就把对错和正确答案亮出来。
   ///
@@ -150,6 +158,7 @@ class QuizState {
     int? remainingMs,
     int? timeLimitMs,
     AnswerRevealMode? revealMode,
+    QuizDirection? direction,
   }) {
     return QuizState(
       status: status ?? this.status,
@@ -164,6 +173,7 @@ class QuizState {
       remainingMs: remainingMs ?? this.remainingMs,
       timeLimitMs: timeLimitMs ?? this.timeLimitMs,
       revealMode: revealMode ?? this.revealMode,
+      direction: direction ?? this.direction,
     );
   }
 }
@@ -219,6 +229,7 @@ class QuizController extends Notifier<QuizState> {
     int? questionCount,
     bool shuffle = true,
     QuizMode mode = QuizMode.practice,
+    QuizDirection? direction,
   }) async {
     final cards = await ref.read(cardRepositoryProvider).getAll(deckId: deckId);
     await startWithCards(
@@ -226,6 +237,7 @@ class QuizController extends Notifier<QuizState> {
       questionCount: questionCount,
       shuffle: shuffle,
       mode: mode,
+      direction: direction,
     );
   }
 
@@ -235,6 +247,7 @@ class QuizController extends Notifier<QuizState> {
     int? questionCount,
     bool shuffle = true,
     QuizMode mode = QuizMode.practice,
+    QuizDirection? direction,
   }) async {
     _cancelTimers();
     _mode = mode;
@@ -245,10 +258,13 @@ class QuizController extends Notifier<QuizState> {
     }
 
     final settings = ref.read(currentSettingsProvider);
+    // 方向由调用方指定；不指定就跟设置走（作答页与演示页共用同一个设置）。
+    final QuizDirection round = direction ?? settings.quizDirection;
     final questions = buildQuizQuestions(
       cards,
       limit: questionCount ?? settings.quizQuestionCount,
       shuffleCards: shuffle,
+      direction: round,
     );
 
     // 限时是硬规则，所以下限给到 1 秒、上限 10 分钟，避免配置出「不限时」。
@@ -265,6 +281,7 @@ class QuizController extends Notifier<QuizState> {
       remainingMs: limitMs,
       timeLimitMs: limitMs,
       revealMode: settings.answerRevealMode,
+      direction: round,
     );
     _startCountdown();
   }

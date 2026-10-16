@@ -3,6 +3,16 @@
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.1.0] - 2026-10-16
+
+### 新增
+
+- **出题方向三选一**：作答页（和演示页，两页共用同一个设置）可以选
+  **看英文选中文**（默认）、**看中文选英文**、**混合**。
+  混合时每道题随机用其中一种，题面上会标出这一题考哪边；
+  反方向的选项从同批其它卡片的单词里借，音标不显示（那是答案的读音），
+  演示的答案 txt 里也会写明这一轮用的是什么方向。
+
 ## [1.0.0] - 2026-10-16
 
 第一个完整版本：手机与电脑都能打包发布。
@@ -41,4 +51,5 @@
 - API Key 以明文存在本机 SQLite 里（本机单用户应用的取舍，界面上已注明不外传）。
 - FSRS 参数不做自优化，直接用官方包自带的那套；见 [docs/复习算法.md](docs/复习算法.md)。
 
+[1.1.0]: https://github.com/Minehara-RI/word_cards/releases/tag/v1.1.0
 [1.0.0]: https://github.com/Minehara-RI/word_cards/releases/tag/v1.0.0

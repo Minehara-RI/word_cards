@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:word_cards/src/domain/models/app_settings.dart';
 import 'package:word_cards/src/domain/models/card_language.dart';
+import 'package:word_cards/src/domain/models/quiz_direction.dart';
 import 'package:word_cards/src/state/providers.dart';
 import 'package:word_cards/src/ui/pages/home_shell.dart';
 import 'package:word_cards/src/ui/pages/import_page.dart';
@@ -22,6 +23,7 @@ void main() {
         studyTagFilter: <String>['第四单元', 'E2E'],
         questionTimeLimitSeconds: 25,
         answerRevealMode: AnswerRevealMode.deferred,
+        quizDirection: QuizDirection.mixed,
         schedulerMode: SchedulerMode.fsrs,
         fsrsDesiredRetention: 0.85,
         promptTemplateId: 'batch',
@@ -53,6 +55,7 @@ void main() {
       expect(back.studyTagFilter, <String>['第四单元', 'E2E']);
       expect(back.questionTimeLimitSeconds, 25);
       expect(back.answerRevealMode, AnswerRevealMode.deferred);
+      expect(back.quizDirection, QuizDirection.mixed);
       expect(back.schedulerMode, SchedulerMode.fsrs);
       expect(back.usesFsrs, isTrue);
       expect(back.fsrsDesiredRetention, 0.85);

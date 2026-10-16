@@ -7,6 +7,7 @@ import '../core/ids.dart';
 import '../data/audio/beep_player.dart';
 import '../data/export/answer_sheet_service.dart';
 import '../domain/models/app_settings.dart';
+import '../domain/models/quiz_direction.dart';
 import '../domain/models/word_card.dart';
 import '../logic/quiz.dart';
 import 'providers.dart';
@@ -133,6 +134,7 @@ class ProjectionController extends Notifier<ProjectionState> {
   List<WordCard> _cards = const <WordCard>[];
   String _deckName = '';
   int _intervalSeconds = 5;
+  QuizDirection _direction = QuizDirection.wordToMeaning;
 
   PageTurnSound _sound = const SilentPageTurnSound();
 
@@ -162,12 +164,15 @@ class ProjectionController extends Notifier<ProjectionState> {
     bool loop = true,
     bool reshuffleEachRound = true,
     bool announcePageTurns = true,
+    QuizDirection? direction,
   }) {
     _cancelTimer();
     _loop = loop;
     _shuffle = shuffle;
     _reshuffleEachRound = reshuffleEachRound;
     _intervalSeconds = intervalSeconds.clamp(1, 600);
+    // 出题方向和「作答」页共用同一个设置；调用方也可以直接指定。
+    _direction = direction ?? ref.read(currentSettingsProvider).quizDirection;
     _deckName = deckName.trim().isEmpty ? '默认词库' : deckName.trim();
     _cards = List<WordCard>.of(cards);
     _sound = announcePageTurns
@@ -199,6 +204,7 @@ class ProjectionController extends Notifier<ProjectionState> {
         limit: _cards.length,
         shuffleCards: _shuffle,
         random: Random(),
+        direction: _direction,
       );
 
   void _startTimer() {

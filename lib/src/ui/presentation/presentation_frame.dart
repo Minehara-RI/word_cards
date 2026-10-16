@@ -3,36 +3,51 @@
 import 'dart:convert';
 
 import '../../domain/models/app_settings.dart';
+import '../../domain/models/quiz_direction.dart';
 
 /// 演示窗口参数里的类型标记：只有带这个标记的窗口才是演示窗口。
 const String kPresentationWindowKind = 'word_cards.presentation';
 
 /// 演示的一道题（窗口之间传的就是这个，不带任何学习状态）。
+///
+/// 窗口之间只传**题面**，不传单词本体：反方向（看中文选英文）的题面
+/// 就是中文释义，传单词等于把答案发给演示窗口。音标同理，
+/// 什么时候带、什么时候不带由主窗口决定（见 [phonetic]）。
 class PresentationQuestion {
   const PresentationQuestion({
-    required this.word,
+    required this.prompt,
     required this.options,
     this.phonetic,
+    this.direction = QuizDirection.wordToMeaning,
   });
 
-  final String word;
+  /// 题面上显示的内容：正方向是单词，反方向是中文释义。
+  final String prompt;
+
+  /// 音标。反方向永远是 null —— 那是答案的读音。
   final String? phonetic;
+
   final List<String> options;
 
+  /// 这一题考哪边。屏幕上要标出来（混合方向时全靠它提示学生选什么）。
+  final QuizDirection direction;
+
   Map<String, Object?> toMap() => <String, Object?>{
-        'word': word,
+        'prompt': prompt,
         'phonetic': phonetic,
         'options': options,
+        'direction': direction.id,
       };
 
   factory PresentationQuestion.fromMap(Map<String, Object?> map) =>
       PresentationQuestion(
-        word: (map['word'] as String?) ?? '',
+        prompt: (map['prompt'] as String?) ?? '',
         phonetic: map['phonetic'] as String?,
         options: <String>[
           for (final Object? option in (map['options'] as List<Object?>? ?? const <Object?>[]))
             option?.toString() ?? '',
         ],
+        direction: QuizDirection.fromId(map['direction']),
       );
 }
 

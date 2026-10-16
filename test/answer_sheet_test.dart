@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:word_cards/src/data/export/answer_sheet_service.dart';
 import 'package:word_cards/src/domain/models/app_settings.dart';
+import 'package:word_cards/src/domain/models/quiz_direction.dart';
 import 'package:word_cards/src/logic/quiz.dart';
 
 import 'support/test_harness.dart';
@@ -66,6 +67,7 @@ void main() {
     final String text = await File(sheet.path).readAsString();
     expect(text, contains('卡组：考研词汇'));
     expect(text, contains('输出模式：单词 + 义项'));
+    expect(text, contains('出题方向：词 → 义'));
     expect(text, contains('1. abandon'));
     expect(text, contains('音标：/əˈbændən/'));
     expect(text, contains('正确答案：B. v. 放弃；抛弃'));
@@ -80,6 +82,31 @@ void main() {
     expect(text, contains('1. B. v. 放弃；抛弃'));
     expect(text, contains('2. A. adj. 一丝不苟的'));
     expect(text, isNot(contains('abandon')));
+    expect(text, isNot(contains('音标')));
+  });
+
+  test('看中文选英文：题面写中文释义，答案写单词，不带音标', () async {
+    final AnswerSheet sheet = await AnswerSheetService().write(
+      questions: <QuizQuestion>[
+        QuizQuestion(
+          card: makeCard(id: 'c1', word: 'abandon'),
+          options: <String>['abandon', 'meticulous', 'candid'],
+          correctIndex: 0,
+          direction: QuizDirection.meaningToWord,
+        ),
+      ],
+      deckName: '考研词汇',
+      intervalSeconds: 5,
+      labelStyle: OptionLabelStyle.letter,
+      mode: AnswerSheetMode.wordAndOption,
+      customDirectory: dir.path,
+      now: DateTime(2026, 10, 15, 22, 15, 30),
+    );
+    final String text = await File(sheet.path).readAsString();
+    expect(text, contains('出题方向：义 → 词'));
+    expect(text, contains('1. v. 放弃；抛弃'));
+    expect(text, contains('正确答案：A. abandon'));
+    // 音标是答案那个词的读音，反方向的答案文件里不该出现。
     expect(text, isNot(contains('音标')));
   });
 

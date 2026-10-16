@@ -120,9 +120,11 @@ ProjectionFrameData projectionFrameOf(
   final List<PresentationQuestion> questions = state.questions
       .map(
         (QuizQuestion question) => PresentationQuestion(
-          word: question.card.word,
-          phonetic: question.card.phonetic,
+          prompt: question.promptText,
+          // 反方向的题面是中文释义，把音标带过去等于把答案泄给演示窗口。
+          phonetic: question.showsPhonetic ? question.card.phonetic : null,
           options: question.options,
+          direction: question.direction,
         ),
       )
       .toList(growable: false);

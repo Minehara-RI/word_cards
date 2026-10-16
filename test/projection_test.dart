@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:word_cards/src/data/audio/beep_player.dart';
 import 'package:word_cards/src/data/export/answer_sheet_service.dart';
 import 'package:word_cards/src/domain/models/app_settings.dart';
+import 'package:word_cards/src/domain/models/quiz_direction.dart';
 import 'package:word_cards/src/domain/models/word_card.dart';
 import 'package:word_cards/src/logic/quiz.dart';
 import 'package:word_cards/src/state/projection_controller.dart';
@@ -51,14 +52,15 @@ void main() {
 
   Future<void> withProjection(
     WidgetTester tester,
-    Future<void> Function(ProviderContainer container) body,
-  ) async {
+    Future<void> Function(ProviderContainer container) body, {
+    AppSettings settings = const AppSettings(),
+  }) async {
     sound = _CountingSound();
     sheets = _RecordingAnswerSheet();
     soundLookups = 0;
     final ProviderContainer container = ProviderContainer(
       overrides: [
-        currentSettingsProvider.overrideWithValue(const AppSettings()),
+        currentSettingsProvider.overrideWithValue(settings),
         pageTurnSoundProvider.overrideWith((ref) {
           soundLookups++;
           return sound;
@@ -88,6 +90,22 @@ void main() {
         makeCard(id: 'c2', word: 'beta', definition: 'n. 第二个'),
         makeCard(id: 'c3', word: 'gamma', definition: 'n. 第三个'),
       ];
+
+  testWidgets('演示也跟着出题方向走：看中文选英文时题面是中文释义', (tester) async {
+    await withProjection(
+      tester,
+      (ProviderContainer container) async {
+        controllerOf(container).start(threeCards(), intervalSeconds: 2, loop: false);
+
+        final QuizQuestion question = stateOf(container).current!;
+        expect(question.direction, QuizDirection.meaningToWord);
+        expect(question.promptText, question.card.definition);
+        expect(question.correctOption, question.card.word);
+        expect(question.showsPhonetic, isFalse);
+      },
+      settings: const AppSettings(quizDirection: QuizDirection.meaningToWord),
+    );
+  });
 
   testWidgets('每道题都有硬性限时，到点自动翻页', (tester) async {
     await withProjection(tester, (ProviderContainer container) async {

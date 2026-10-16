@@ -6,7 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/models/app_settings.dart';
 import '../../domain/models/answer_record.dart';
+import '../../domain/models/quiz_direction.dart';
 import '../../domain/models/word_card.dart';
+import '../../logic/quiz.dart';
 import '../../state/providers.dart';
 import '../../state/quiz_controller.dart';
 import '../platform_target.dart';
@@ -199,7 +201,7 @@ class _QuestionView extends StatelessWidget {
         const SizedBox(height: 12),
         _CountdownBar(state: state),
         const SizedBox(height: 20),
-        _WordHeader(card: question.card),
+        _WordHeader(question: question, mixed: state.direction.isMixed),
         const SizedBox(height: 24),
         ...List<Widget>.generate(question.options.length, (index) {
           return Padding(
@@ -324,30 +326,61 @@ class _CountdownBar extends StatelessWidget {
   }
 }
 
+/// 题面。正方向给单词（大字 + 音标 + 词性），反方向给中文释义
+/// —— 那是一整句中文，字号小一号，而且**不显示音标**：
+/// 音标就是答案那个词的读音，摆在题面上等于把答案写出来。
 class _WordHeader extends StatelessWidget {
-  const _WordHeader({required this.card});
+  const _WordHeader({required this.question, required this.mixed});
 
-  final WordCard card;
+  final QuizQuestion question;
+
+  /// 本轮是不是混合方向。混合模式下每一题都要标出考的是哪边，
+  /// 否则用户看不出这一题该选中文还是选单词。
+  final bool mixed;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final phonetic = card.phonetic;
-    final partOfSpeech = card.partOfSpeech;
+    final WordCard card = question.card;
+    final QuizDirection direction = question.direction;
+    final String? phonetic = question.showsPhonetic ? card.phonetic : null;
+    final String? partOfSpeech = card.partOfSpeech;
 
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 26),
         child: Column(
           children: <Widget>[
-            Text(
-              card.word,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.displaySmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.5,
+            if (mixed) ...<Widget>[
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(
+                  color: scheme.tertiaryContainer,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  direction.shortLabel,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: scheme.onTertiaryContainer,
+                  ),
+                ),
               ),
+              const SizedBox(height: 12),
+            ],
+            Text(
+              question.promptText,
+              textAlign: TextAlign.center,
+              style: direction.isReverse
+                  ? theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      height: 1.4,
+                    )
+                  : theme.textTheme.displaySmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
             ),
             if (phonetic != null) ...<Widget>[
               const SizedBox(height: 10),
@@ -501,14 +534,17 @@ class _ActionBar extends StatelessWidget {
     final scheme = theme.colorScheme;
 
     if (!state.isAnswered) {
+      // 「正确X」里的 X 跟着方向走：反方向选的是单词。
+      final String noun = state.current?.direction.answerNoun ?? '释义';
       return Center(
-        child: Text('选择一个释义', style: theme.textTheme.bodySmall),
+        child: Text('选择一个' + noun, style: theme.textTheme.bodySmall),
       );
     }
 
     final nextLabel = state.isLastQuestion ? '看结果' : '下一题';
     final question = state.current;
     final correctAnswer = question?.correctOption ?? '';
+    final String noun = question?.direction.answerNoun ?? '释义';
 
     // 不揭晓答案的模式：只确认「已记录」
     if (!state.showCorrectness) {
@@ -540,7 +576,7 @@ class _ActionBar extends StatelessWidget {
     if (state.timedOut) {
       icon = Icons.timer_off_outlined;
       color = scheme.error;
-      label = '超时了，正确释义：' + correctAnswer;
+      label = '超时了，正确' + noun + '：' + correctAnswer;
     } else if (state.currentCorrect ?? false) {
       icon = Icons.check_circle_outline;
       color = const Color(0xFF16A34A);
@@ -548,7 +584,7 @@ class _ActionBar extends StatelessWidget {
     } else {
       icon = Icons.error_outline;
       color = scheme.error;
-      label = '答错了，正确释义：' + correctAnswer;
+      label = '答错了，正确' + noun + '：' + correctAnswer;
     }
 
     return Row(
@@ -793,7 +829,7 @@ class _ReviewCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           Text(
-                            item.word,
+                            item.prompt,
                             style: theme.textTheme.bodyMedium
                                 ?.copyWith(fontWeight: FontWeight.w600),
                           ),

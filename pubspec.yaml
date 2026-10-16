@@ -5,7 +5,7 @@ publish_to: 'none'
 
 # 版本号只有一个来源：安装包与 APK 的文件名都由 build 脚本从这里读。
 # 格式 主.次.修订+构建号；Android 用 versionName/versionCode，Windows 用前三位 + 构建号。
-version: 1.0.0+1
+version: 1.1.0+2
 
 environment:
   sdk: ^3.13.5

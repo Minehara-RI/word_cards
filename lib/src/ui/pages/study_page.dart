@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/models/answer_record.dart';
 import '../../domain/models/app_settings.dart';
+import '../../domain/models/quiz_direction.dart';
 import '../../domain/models/word_card.dart';
 import '../../logic/fsrs.dart';
 import '../../logic/stats.dart';
@@ -143,6 +144,28 @@ class StudyPage extends ConsumerWidget {
                       update(settings.copyWith(studyTagFilter: next)),
                 ),
               ],
+              const SizedBox(height: 16),
+              Text('出题方向', style: theme.textTheme.labelMedium),
+              const SizedBox(height: 4),
+              Text(
+                settings.quizDirection.describe(settings.language),
+                style: theme.textTheme.bodySmall,
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: <Widget>[
+                  for (final QuizDirection direction in QuizDirection.values)
+                    ChoiceChip(
+                      label: Text(direction.labelFor(settings.language)),
+                      selected: settings.quizDirection == direction,
+                      onSelected: (_) => update(
+                        settings.copyWith(quizDirection: direction),
+                      ),
+                    ),
+                ],
+              ),
               const SizedBox(height: 16),
               Text('每题限时', style: theme.textTheme.labelMedium),
               const SizedBox(height: 4),

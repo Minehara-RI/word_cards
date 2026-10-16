@@ -1,5 +1,6 @@
 import 'card_language.dart';
 import 'card_source.dart';
+import 'quiz_direction.dart';
 
 /// 主题偏好。刻意不用 Flutter 的 ThemeMode，保持领域层纯 Dart。
 enum AppThemeMode {
@@ -168,6 +169,7 @@ class AppSettings {
     this.studyTagFilter = const <String>[],
     this.questionTimeLimitSeconds = 10,
     this.answerRevealMode = AnswerRevealMode.immediate,
+    this.quizDirection = QuizDirection.wordToMeaning,
     this.apiCacheHours = 24,
     this.projectionIntervalSeconds = 5,
     this.projectionShuffle = false,
@@ -275,6 +277,9 @@ class AppSettings {
 
   /// 答题过程中什么时候显示正误。
   final AnswerRevealMode answerRevealMode;
+
+  /// 出题方向：看词选义、看义选词，或者每道题在两者之间随机（混合）。
+  final QuizDirection quizDirection;
 
   // ---- 投影模式（仅桌面端）----
   final int projectionIntervalSeconds;
@@ -414,6 +419,7 @@ class AppSettings {
     List<String>? studyTagFilter,
     int? questionTimeLimitSeconds,
     AnswerRevealMode? answerRevealMode,
+    QuizDirection? quizDirection,
     int? apiCacheHours,
     int? projectionIntervalSeconds,
     bool? projectionShuffle,
@@ -455,6 +461,7 @@ class AppSettings {
       questionTimeLimitSeconds:
           questionTimeLimitSeconds ?? this.questionTimeLimitSeconds,
       answerRevealMode: answerRevealMode ?? this.answerRevealMode,
+      quizDirection: quizDirection ?? this.quizDirection,
       apiCacheHours: apiCacheHours ?? this.apiCacheHours,
       projectionIntervalSeconds:
           projectionIntervalSeconds ?? this.projectionIntervalSeconds,
@@ -505,6 +512,7 @@ class AppSettings {
         'study_tag_filter': studyTagFilter,
         'question_time_limit_seconds': questionTimeLimitSeconds,
         'answer_reveal_mode': answerRevealMode.id,
+        'quiz_direction': quizDirection.id,
         'api_cache_hours': apiCacheHours,
         'projection_interval_seconds': projectionIntervalSeconds,
         'projection_shuffle': projectionShuffle ? 1 : 0,
@@ -558,6 +566,7 @@ class AppSettings {
         questionTimeLimitSeconds:
             (map['question_time_limit_seconds'] as num?)?.toInt() ?? 10,
         answerRevealMode: AnswerRevealMode.fromId(map['answer_reveal_mode']),
+        quizDirection: QuizDirection.fromId(map['quiz_direction']),
         apiCacheHours: (map['api_cache_hours'] as num?)?.toInt() ?? 24,
         projectionIntervalSeconds:
             (map['projection_interval_seconds'] as num?)?.toInt() ?? 5,

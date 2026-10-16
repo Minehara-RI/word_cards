@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/export/answer_sheet_service.dart';
 import '../../domain/models/app_settings.dart';
 import '../../domain/models/deck.dart';
+import '../../domain/models/quiz_direction.dart';
 import '../../domain/models/word_card.dart';
 import '../../state/projection_controller.dart';
 import '../../state/providers.dart';
@@ -316,6 +317,29 @@ class _ProjectionPageState extends ConsumerState<ProjectionPage> {
               Text(
                 '学生按编号喊答案时用哪个都行；编号只是显示，不影响出题。',
                 style: theme.textTheme.bodySmall,
+              ),
+              const SizedBox(height: 16),
+              Text('出题方向', style: theme.textTheme.labelMedium),
+              const SizedBox(height: 4),
+              Text(
+                settings.quizDirection.describe(settings.language) +
+                    '（和「作答」页共用同一个设置）',
+                style: theme.textTheme.bodySmall,
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: <Widget>[
+                  for (final QuizDirection direction in QuizDirection.values)
+                    ChoiceChip(
+                      label: Text(direction.labelFor(settings.language)),
+                      selected: settings.quizDirection == direction,
+                      onSelected: (_) => _save(
+                        settings.copyWith(quizDirection: direction),
+                      ),
+                    ),
+                ],
               ),
             ],
           ),

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:word_cards/src/domain/models/app_settings.dart';
+import 'package:word_cards/src/domain/models/quiz_direction.dart';
 import 'package:word_cards/src/logic/quiz.dart';
 import 'package:word_cards/src/state/projection_controller.dart';
 import 'package:word_cards/src/state/providers.dart';
@@ -18,7 +19,7 @@ void main() {
     status: PresentationFrame.statusRunning,
     questions: const <PresentationQuestion>[
       PresentationQuestion(
-        word: 'すいえい',
+        prompt: 'すいえい',
         phonetic: '【すいえい】',
         options: <String>['n. 游泳', 'n. 跑步'],
       ),
@@ -40,9 +41,10 @@ void main() {
       final PresentationFrame back =
           PresentationWindowPayload.tryDecode(payload.encode())!.frame;
       expect(back.status, PresentationFrame.statusRunning);
-      expect(back.questions.single.word, 'すいえい');
+      expect(back.questions.single.prompt, 'すいえい');
       expect(back.questions.single.phonetic, '【すいえい】');
       expect(back.questions.single.options, <String>['n. 游泳', 'n. 跑步']);
+      expect(back.questions.single.direction, QuizDirection.wordToMeaning);
       expect(back.labelStyle, OptionLabelStyle.letter);
       expect(back.remainingSeconds, 3);
       expect(back.remainingRatio, closeTo(0.5, 1e-9));
@@ -63,7 +65,37 @@ void main() {
           PresentationWindowPayload.tryDecode(payload.encode());
       expect(back, isNotNull);
       expect(back!.themeMode, AppThemeMode.dark);
-      expect(back.frame.questions.single.word, 'すいえい');
+      expect(back.frame.questions.single.prompt, 'すいえい');
+    });
+
+    test('反方向的题面是中文释义，音标不带过去', () {
+      final PresentationWindowPayload payload = PresentationWindowPayload(
+        frame: PresentationFrame(
+          status: PresentationFrame.statusRunning,
+          questions: const <PresentationQuestion>[
+            PresentationQuestion(
+              prompt: 'v. 放弃；抛弃',
+              options: <String>['abandon', 'meticulous'],
+              direction: QuizDirection.meaningToWord,
+            ),
+          ],
+          index: 0,
+          remainingMs: 1000,
+          intervalMs: 5000,
+          paused: false,
+          loops: 0,
+          labelStyle: OptionLabelStyle.number,
+        ),
+        themeMode: AppThemeMode.system,
+      );
+      final PresentationQuestion question =
+          PresentationWindowPayload.tryDecode(payload.encode())!
+              .frame
+              .questions
+              .single;
+      expect(question.prompt, 'v. 放弃；抛弃');
+      expect(question.phonetic, isNull);
+      expect(question.direction, QuizDirection.meaningToWord);
     });
   });
 
@@ -85,7 +117,7 @@ void main() {
       );
       final ProjectionFrameData data = projectionFrameOf(state, settings);
       expect(data.frame.isRunning, isTrue);
-      expect(data.frame.current!.word, 'abandon');
+      expect(data.frame.current!.prompt, 'abandon');
       expect(data.frame.remainingSeconds, 1);
       expect(data.frame.labelStyle, OptionLabelStyle.letter);
       expect(data.frame.loops, 2);

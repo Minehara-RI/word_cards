@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../../domain/models/app_settings.dart';
+import '../../domain/models/quiz_direction.dart';
 import '../../logic/quiz.dart';
 
 /// 一次答案文件的写入结果。
@@ -88,6 +89,7 @@ class AnswerSheetService {
     buffer.writeln('每题停留：' + intervalSeconds.toString() + ' 秒');
     buffer.writeln('选项编号：' + labelStyle.label);
     buffer.writeln('输出模式：' + mode.label);
+    buffer.writeln('出题方向：' + _directionLabel(questions));
     buffer.writeln();
     for (int i = 0; i < questions.length; i++) {
       final QuizQuestion question = questions[i];
@@ -96,18 +98,36 @@ class AnswerSheetService {
           question.correctOption;
       final String number = (i + 1).toString() + '. ';
       if (mode == AnswerSheetMode.optionOnly) {
-        // 只含选项：一行一题，不写单词
+        // 只含选项：一行一题，不写题面
         buffer.writeln(number + answer);
         continue;
       }
-      buffer.writeln(number + question.card.word);
-      final String? phonetic = question.card.phonetic;
-      if (phonetic != null && phonetic.isNotEmpty) {
-        buffer.writeln('   音标：' + phonetic);
+      // 题面写的正是屏幕上显示的那一行：正方向是单词，反方向是中文释义。
+      buffer.writeln(number + question.promptText);
+      // 反方向不带音标：演示时它本来就不显示（那是答案的读音）。
+      if (question.showsPhonetic) {
+        final String? phonetic = question.card.phonetic;
+        if (phonetic != null && phonetic.isNotEmpty) {
+          buffer.writeln('   音标：' + phonetic);
+        }
       }
       buffer.writeln('   正确答案：' + answer);
     }
     return buffer.toString();
+  }
+
+  /// 这份答案用的是什么出题方向：全正、全反，还是两种都有。
+  static String _directionLabel(List<QuizQuestion> questions) {
+    final bool anyReverse =
+        questions.any((QuizQuestion question) => question.direction.isReverse);
+    final bool anyForward =
+        questions.any((QuizQuestion question) => !question.direction.isReverse);
+    final QuizDirection round = anyReverse && anyForward
+        ? QuizDirection.mixed
+        : (anyReverse
+            ? QuizDirection.meaningToWord
+            : QuizDirection.wordToMeaning);
+    return round.shortLabel + '（' + round.description + '）';
   }
 
   static String _stamp(DateTime time) {

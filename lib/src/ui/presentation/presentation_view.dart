@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/models/app_settings.dart';
+import '../../domain/models/quiz_direction.dart';
 import '../fonts.dart';
 import '../theme.dart';
 import 'presentation_frame.dart';
@@ -104,6 +105,8 @@ class _RunningView extends StatelessWidget {
                     style: projectionStyle(context,
                         size: ProjectionText.meta, weight: FontWeight.w600),
                   ),
+                  const SizedBox(width: 12),
+                  _DirectionTag(direction: card.direction),
                   const Spacer(),
                   if (frame.loops > 0)
                     Padding(
@@ -157,7 +160,7 @@ class _RunningView extends StatelessWidget {
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      card.word,
+                      card.prompt,
                       textAlign: TextAlign.center,
                       style: projectionStyle(
                         context,
@@ -296,6 +299,37 @@ class _OptionRow extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// 题面旁边的小标签：这一题是「词 → 义」还是「义 → 词」。
+///
+/// 演示画面全程不显示对错，方向就是唯一会变的东西；混合方向时
+/// 没有这个标签，学生会不知道该选中文还是选单词。
+class _DirectionTag extends StatelessWidget {
+  const _DirectionTag({required this.direction});
+
+  final QuizDirection direction;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: scheme.tertiaryContainer,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        direction.shortLabel,
+        style: projectionStyle(
+          context,
+          size: ProjectionText.hint,
+          weight: FontWeight.w600,
+          color: scheme.onTertiaryContainer,
+        ),
       ),
     );
   }
