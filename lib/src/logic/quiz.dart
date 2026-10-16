@@ -113,7 +113,7 @@ List<String> _borrowPool(List<WordCard> cards) {
   return pool;
 }
 
-/// 依据答题结果更新卡片的学习状态（阶段五会换成完整的 SM-2）。
+/// 依据答题结果更新卡片的学习状态（掌握度与各项统计字段）。
 WordCard applyAnswer(
   WordCard card, {
   required bool correct,

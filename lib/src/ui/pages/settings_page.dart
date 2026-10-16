@@ -206,7 +206,8 @@ class SettingsPage extends ConsumerWidget {
               _Section(
                 title: '关于',
                 child: Text(
-                  '单词卡片 1.0.0（阶段一）\n'
+                  // 版本号与 pubspec.yaml 的 version 保持一致
+                  '单词卡片 1.0.0\n'
                   '所有卡片、答题记录与配置都只保存在这台设备上，'
                   '不联网、不上传、不需要账号。',
                   style: Theme.of(context).textTheme.bodySmall,

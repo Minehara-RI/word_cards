@@ -73,3 +73,6 @@ app.*.map.json
 *.db
 *.db-journal
 word_cards.db
+
+# 面向 AI 助手与本机开发者的说明（含本机路径与开发历史，刻意不入库）
+/AGENTS.md

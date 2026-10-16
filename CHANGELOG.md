@@ -5,7 +5,7 @@
 
 ## [1.0.0] - 2026-10-16
 
-第一个完整版本。五个阶段全部做完，手机与电脑都能打包发布。
+第一个完整版本：手机与电脑都能打包发布。
 
 ### 新增
 
@@ -36,9 +36,9 @@
 ### 已知限制
 
 - Android APK 目前使用 **debug 签名**，适合自己安装与分发，上架应用商店前
-  需要换成自己的 keystore，步骤见 [docs/打包与发布.md](docs/打包与发布.md)。
+  需要换成自己的 keystore，步骤见 [docs/构建与发布.md](docs/构建与发布.md)。
 - API 直连不支持流式输出，失败也不会自动重试（避免重复计费）。
 - API Key 以明文存在本机 SQLite 里（本机单用户应用的取舍，界面上已注明不外传）。
-- FSRS 参数不做自优化；调研结论见 [docs/FSRS参数优化.md](docs/FSRS参数优化.md)。
+- FSRS 参数不做自优化，直接用官方包自带的那套；见 [docs/复习算法.md](docs/复习算法.md)。
 
 [1.0.0]: https://github.com/Minehara-RI/word_cards/releases/tag/v1.0.0

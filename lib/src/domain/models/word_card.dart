@@ -67,7 +67,7 @@ class WordCard {
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  // ---- 学习状态（阶段五的间隔重复会读写这些字段）----
+  // ---- 学习状态（掌握度与间隔重复都要读写这些字段）----
   final int reviewCount;
   final int correctCount;
   final int wrongCount;

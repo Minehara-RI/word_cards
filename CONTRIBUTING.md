@@ -12,9 +12,8 @@
 | Android | JDK 17+、Android SDK、NDK（`sqlite3_flutter_libs` 要编译原生库） |
 | Windows | Visual Studio 2022 + 「使用 C++ 的桌面开发」工作负载 |
 
-本机的安装位置集中在 [scripts/env.ps1](scripts/env.ps1) 一个文件里，
-换机器只改它。更详细的说明见
-[docs/环境与工具链.md](docs/环境与工具链.md)。
+工具链路径集中在 [scripts/env.ps1](scripts/env.ps1)：它先看环境变量，
+再退回文件里的默认路径，最后找 PATH。换机器只改这一个文件。
 
 ```powershell
 git clone https://github.com/Minehara-RI/word_cards.git
@@ -69,10 +68,10 @@ pwsh -File scripts\verify.ps1
 
 - 一个 PR 只做一件事；
 - 说明**为什么**这么改，而不只是改了什么；
-- 改了界面就附一张截图（`docs/screenshots/` 里已有 32 张可以对照编号）；
+- 改了界面就附一张截图（`docs/screenshots/` 里已有 31 张可以对照编号）；
 - 确定 `pwsh -File scripts\verify.ps1` 全绿。
 
 ## 发布
 
 打包与发布流程（APK / Windows 安装包、版本号从哪来、签名怎么换）见
-[docs/打包与发布.md](docs/打包与发布.md)。
+[docs/构建与发布.md](docs/构建与发布.md)。
