@@ -7,8 +7,8 @@
     取值顺序：环境里已设好的同名变量 → 下面这组默认路径 → PATH。
     换机器时改下面这五行即可；提前把环境变量设好，脚本就一个字都不用动。
 
-    每个目录都要「里面真的有对应的文件」才算数，找不到就直接抛错，
-    免得后面报一堆看不懂的构建错误。
+    每个目录都要「里面确实有对应的文件」才算数；都找不到就不设这个变量，
+    让工具用它自己默认的位置（Flutter 是唯一的例外：找不到直接报错）。
 #>
 
 # ---- 默认路径（换机器时改这里）----
@@ -36,10 +36,11 @@ function Resolve-ToolDir {
 }
 
 $toolJavaHome = Resolve-ToolDir 'JAVA_HOME' $DefaultJavaHome 'bin\java.exe'
-if (-not $toolJavaHome) {
-    throw "找不到 JDK：环境变量 JAVA_HOME 与 $DefaultJavaHome 都不对（改 scripts\env.ps1）"
+if ($toolJavaHome) {
+    $env:JAVA_HOME = $toolJavaHome
+} else {
+    Write-Warning "找不到 JDK（打 Android 包要用）：设好 JAVA_HOME，或改 scripts\env.ps1 里的默认路径"
 }
-$env:JAVA_HOME = $toolJavaHome
 
 $toolAndroidHome = Resolve-ToolDir 'ANDROID_HOME' $DefaultAndroidHome 'platform-tools'
 if ($toolAndroidHome) {
@@ -49,11 +50,13 @@ if ($toolAndroidHome) {
     Write-Warning "找不到 Android SDK：只做 Windows 构建与测试不受影响（改 scripts\env.ps1）"
 }
 
+# 这两处找不到就不设：指到一个不存在的目录只会让 pub / gradle 从零重新下一遍，
+# 不如让它们用自己默认的位置（CI 上就是这样）。
 $toolPubCache = Resolve-ToolDir 'PUB_CACHE' $DefaultPubCache 'hosted'
-$env:PUB_CACHE = if ($toolPubCache) { $toolPubCache } else { $DefaultPubCache }
+if ($toolPubCache) { $env:PUB_CACHE = $toolPubCache }
 
 $toolGradleHome = Resolve-ToolDir 'GRADLE_USER_HOME' $DefaultGradleHome 'caches'
-$env:GRADLE_USER_HOME = if ($toolGradleHome) { $toolGradleHome } else { $DefaultGradleHome }
+if ($toolGradleHome) { $env:GRADLE_USER_HOME = $toolGradleHome }
 
 # Flutter：默认路径优先，其次 PATH 上的 flutter。
 $flutterRoot = Resolve-ToolDir 'FLUTTER_ROOT' $DefaultFlutterRoot 'bin\flutter.bat'

@@ -1,6 +1,7 @@
 # 单词卡片
 
 [![CI](https://github.com/Minehara-RI/word_cards/actions/workflows/ci.yml/badge.svg)](https://github.com/Minehara-RI/word_cards/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Minehara-RI/word_cards)](https://github.com/Minehara-RI/word_cards/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android%20%7C%20Windows-lightgrey)
 
@@ -52,6 +53,8 @@ Android 与 Windows 都能用，**所有数据只存在本机**：不联网、�
 | ![标签筛选](docs/screenshots/29-作答-标签筛选与全部.png) | ![键盘作答](docs/screenshots/30-作答-桌面键盘作答.png) | ![API 直连](docs/screenshots/31-导入页-API直连.png) | ![AI 生成](docs/screenshots/32-设置-API生成.png) |
 
 ## 安装
+
+到 [Releases](https://github.com/Minehara-RI/word_cards/releases/latest) 下载对应平台的包。
 
 ### Android
 
