@@ -1,8 +1,9 @@
 # FSRS 参数优化（调研存档，未来开发用）
 
 > 结论先行：**Anki 的 FSRS 参数优化是一次性的、由用户点按钮触发的机器学习训练**，
-> 不是运行时自动发生的。本应用当前不使用它 —— 参数钉死成 Anki 25.09 内置的
-> FSRS-6 参数集（`kFsrs6AnkiParameters`，见 `lib/src/logic/fsrs.dart`）。
+> 不是运行时自动发生的。本应用当前**不做参数优化**：直接用官方
+> dart-fsrs 包自带的 FSRS-6 参数集（`kFsrs6DefaultParameters`，
+> 见 `lib/src/logic/fsrs.dart`），也不抄别的应用的参数。
 > 这份文档把「将来要做的话该怎么做、必须复刻什么、会踩什么坑」记下来，免得重新摸底。
 
 调研时间：2026-10；对照源码：`ankitects/anki` 主线 + `open-spaced-repetition/fsrs-rs v5.1.0`
@@ -170,10 +171,10 @@ current_preset / total_presets // 批量优化时报进度
 
 | 位置 | 内容 |
 |---|---|
-| `lib/src/logic/fsrs.dart` | `kFsrs6DefaultParameters`（dart-fsrs 自带）、`kFsrs6AnkiParameters`（Anki 25.09 那套）、`FsrsConfig` |
+| `lib/src/logic/fsrs.dart` | `kFsrs6DefaultParameters`（dart-fsrs 自带）、`FsrsConfig` |
 | `lib/src/data/anki/anki_schema.dart` | `wc_answer_log` 等 `wc_` 扩展表（训练数据来源） |
 | `lib/src/data/anki/anki_record_repository.dart` | 作答记录读写（将来训练集的取数入口） |
 | `wc_settings` | `key/value` JSON；将来放优化结果与上次优化时间 |
 
-**当前决定**：参数不优化，用 `kFsrs6AnkiParameters`；
+**当前决定**：不优化参数，就用 dart-fsrs 自带的默认值；
 本文件只在真要开工时读。

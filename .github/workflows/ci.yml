@@ -1,0 +1,69 @@
+name: CI
+
+# 每次推到 main、以及每个 PR 都跑。三件事：静态检查、测试、能不能编译出 Windows 版。
+# 跑在 windows-latest 上 —— 本项目的桌面端就是 Windows，测试也是在这上面
+# 全绿验证过的（239 个），换 Linux 跑没必要冒险。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# 同一个分支连着推时，取消掉上一次没跑完的，省额度。
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: '3.47.7'
+
+jobs:
+  analyze-and-test:
+    name: 静态检查与测试
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: 取依赖
+        run: flutter pub get
+
+      - name: 静态检查（零告警是硬要求）
+        run: flutter analyze
+
+      - name: 单元与 widget 测试
+        run: flutter test
+
+  build-windows:
+    name: 编译 Windows 版
+    runs-on: windows-latest
+    timeout-minutes: 40
+    needs: analyze-and-test
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      # 这一步主要防「本地能跑、推上来编译不过」：真编译一次 release。
+      - name: 编译 release
+        run: flutter build windows --release
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: word_cards-windows
+          path: build/windows/x64/runner/Release/
+          retention-days: 7

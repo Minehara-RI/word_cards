@@ -1,0 +1,22 @@
+version: 2
+updates:
+  # Dart / Flutter 依赖
+  - package-ecosystem: pub
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps):"
+    # 大版本升级通常要改代码，让小版本自己来、大版本手动处理
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions 本身
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "chore(ci):"

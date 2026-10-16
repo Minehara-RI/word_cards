@@ -84,8 +84,10 @@
   `wc_card_fsrs` 表里，掌握度 / 正确率 / interval_days / ease_factor 那套照旧由
   原来的逻辑维护。开着 FSRS 只写新表，换回原有算法时新表原样留着，
   两边都不认识对方，谁也不覆盖谁
-- 参数：默认用官方包自带的 FSRS-6 参数；想和 Anki 25.09（fsrs-rs v5.1.0）完全对齐，
-  把 `FsrsConfig(parameters: kFsrs6AnkiParameters)` 传进去即可
+- 参数：用官方 dart-fsrs 包自带的 FSRS-6 参数（`kFsrs6DefaultParameters`），
+  不自己训练、也不抄别的应用的参数（理由见
+  [FSRS参数优化.md](FSRS参数优化.md)）；要试别的参数集，
+  给 `FsrsConfig(parameters: [...21 个...])` 传一组即可，格式不对会自动退回默认值
 - 学习步长刻意留空（`learningSteps: []`）：本应用一轮里一个词只答一次，
   不需要「1 分钟 / 10 分钟」这种当天内的学习步骤，首次作答后直接按稳定性给天数
 

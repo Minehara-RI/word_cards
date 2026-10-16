@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 先看文档
+    url: https://github.com/Minehara-RI/word_cards/tree/main/docs
+    about: 库结构、各阶段验收、打包与发布、环境与工具链都在这
+  - name: 安全问题
+    url: https://github.com/Minehara-RI/word_cards/security/advisories/new
+    about: 请走私密漏洞报告，不要开公开 Issue

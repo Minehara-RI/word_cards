@@ -596,8 +596,7 @@ class _FsrsPanel extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             '算法：FSRS-6（直接用官方 dart-fsrs 包，参数就是它自带的默认值）；'
-            '评分由作答结果映射——超时或答错记 Again，答对按用时记 Hard / Good / Easy。'
-            '想和 Anki 完全对齐，可以在代码里换成 Anki 那套参数（kFsrs6AnkiParameters）。',
+            '评分由作答结果映射——超时或答错记 Again，答对按用时记 Hard / Good / Easy。',
             style: theme.textTheme.bodySmall,
           ),
         ],

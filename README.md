@@ -1,5 +1,9 @@
 # 单词卡片（word_cards）
 
+[![CI](https://github.com/Minehara-RI/word_cards/actions/workflows/ci.yml/badge.svg)](https://github.com/Minehara-RI/word_cards/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+![Platform](https://img.shields.io/badge/platform-Android%20%7C%20Windows-lightgrey)
+
 AI 驱动的跨平台单词学习应用。输入单词，用 AI 生成「正确释义 + 4 个有混淆性的干扰项」，
 然后做五选一快速测验；**所有数据只存在本机**，不联网、不上传、不需要账号。
 
@@ -311,10 +315,10 @@ pwsh -File scripts\build_release.ps1
 - [x] **阶段四** 课堂投影模式（独立最大化窗口、每词限时自动翻页、播放控制、可换翻页提示音）
 - [~] **阶段五** 间隔重复：已用**官方 dart-fsrs 包**实现 FSRS-6 调度（可选、与原有算法并存），
   统计与导入导出也已就位；SM-2 那套老算法保留不动
-- [x] **收尾**：FSRS 的参数集**沿用 dart-fsrs 包自带那套**（`kFsrs6DefaultParameters`）——
-  经评估决定不换成 Anki 那组、也不做参数自优化（自优化是 2-3 周的独立工程，
-  且当前数据量远不够训练，理由见 [docs/FSRS参数优化.md](docs/FSRS参数优化.md)）。
-  Anki 那组参数仍留在 `kFsrs6AnkiParameters` 里备用，想换随时能换。
+- [x] **收尾**：FSRS 的参数集**用 dart-fsrs 包自带那套**（`kFsrs6DefaultParameters`）——
+  不自己训练、也不抄别的应用的参数。经评估，参数自优化是 2-3 周的独立工程，
+  且当前数据量远不够训练，因此不做（理由见
+  [docs/FSRS参数优化.md](docs/FSRS参数优化.md)）。
 - [x] **打包**：`scripts\build_release.ps1` 一条命令出 Android APK +
   Windows 免安装包 + Windows 安装包，见 [docs/打包与发布.md](docs/打包与发布.md)
 
@@ -341,3 +345,14 @@ pwsh -File scripts\build_release.ps1
    调研结论、三条实现路线与设计草案都记在 [docs/FSRS参数优化.md](docs/FSRS参数优化.md)；
 2. **发布签名** —— APK 目前是 debug 签名，上架前需要换成自己的 keystore，
    步骤见 [docs/打包与发布.md](docs/打包与发布.md)。
+
+## 参与 / 许可
+
+- 想改代码：[CONTRIBUTING.md](CONTRIBUTING.md)（环境、提交前要过的门、分层约定）；
+- 发现安全问题：[SECURITY.md](SECURITY.md)（**不要开公开 Issue**，走私密漏洞报告）；
+- 版本变更：[CHANGELOG.md](CHANGELOG.md)。
+
+以 [MIT 许可证](LICENSE) 发布，© 2026 Minehara-RI。
+
+> 第三方依赖各自遵循自己的许可证，见 `flutter pub deps` 或各自的 pubspec。
+> 本项目的界面文案与文档为中文。

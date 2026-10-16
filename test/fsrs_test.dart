@@ -26,12 +26,7 @@ void main() {
       expect(() => config.build(), returnsNormally);
     });
 
-    test('Anki 那套参数也是 21 个，可以换着用', () {
-      expect(kFsrs6AnkiParameters.length, 21);
-      expect(
-        () => const FsrsConfig(parameters: kFsrs6AnkiParameters).build(),
-        returnsNormally,
-      );
+    test('copyWith 只改指定字段', () {
       expect(
         FsrsConfig.defaults.copyWith(desiredRetention: 0.8).desiredRetention,
         0.8,

@@ -1,0 +1,60 @@
+name: 缺陷报告
+description: 有东西不对、崩了、或者跟文档写的不一样
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        提之前先看一眼 [README](https://github.com/Minehara-RI/word_cards#readme)
+        和 [docs/](https://github.com/Minehara-RI/word_cards/tree/main/docs)，
+        有些「像 bug」的行为其实是写在文档里的取舍。
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 在哪个平台上
+      options:
+        - Windows
+        - Android
+        - 两个都有
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: 版本
+      description: 设置页底部，或者安装包 / APK 的文件名
+      placeholder: "1.0.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 发生了什么
+      description: 实际现象是什么？期望是什么？
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 怎么复现
+      placeholder: |
+        1. 打开「加入」页
+        2. ...
+        3. 结果 ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 截图 / 日志 / 其他
+      description: |
+        界面问题请附截图（`docs/screenshots/` 里有 32 张可以对照编号）。
+        API 直连相关的请说明用的是哪家服务商，**不要把 API Key 贴进来**。
+    validations:
+      required: false

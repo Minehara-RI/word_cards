@@ -16,16 +16,6 @@ import '../domain/models/word_card.dart';
 /// 官方包的默认参数（21 个 = FSRS-6）。
 const List<double> kFsrs6DefaultParameters = fsrs.defaultParameters;
 
-/// Anki 25.09 内置 fsrs-rs v5.1.0 的 FSRS-6 参数。
-///
-/// 和官方包的默认值不同（那是另一套训练出来的参数），
-/// 想和 Anki 完全对齐时把 [FsrsConfig.parameters] 换成这一组即可。
-const List<double> kFsrs6AnkiParameters = <double>[
-  0.212, 1.2931, 2.3065, 8.2956, 6.4133, 0.8334, 3.0194, 0.001, 1.8722, 0.1666,
-  0.796, 1.4835, 0.0614, 0.2629, 1.6483, 0.6014, 1.8729, 0.5425, 0.0912, 0.0658,
-  0.1542,
-];
-
 /// 一套 FSRS 配置。
 ///
 /// 学习步长刻意留空：本应用一轮测验里一个词只答一次，
