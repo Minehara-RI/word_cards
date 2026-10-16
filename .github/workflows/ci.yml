@@ -62,7 +62,7 @@ jobs:
         run: flutter build windows --release
 
       - name: 上传产物
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: word_cards-windows
           path: build/windows/x64/runner/Release/
