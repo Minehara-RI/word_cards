@@ -1,22 +1,21 @@
 version: 2
+
+# 依赖检查：一年一次（Dependabot 的 yearly 会在每年 1 月 1 日跑）。
+#
+# 为什么这么懒：
+# - 直接依赖本来就跟得很紧，小版本漂移要一年才看得出量；
+# - GitHub Actions 钉的是会移动的大版本标签（@v5 自动拿 v5.x 的补丁），
+#   所以旧标签并不等于没有修复，只是少了新功能，不值得每月提 PR；
+# - 安全漏洞由 Dependabot 安全告警（已开启）单独盯，和这里无关。
+#
+# 唯一要到期的提醒：GitHub 弃用 Action 依赖的 Node 运行时前会在 CI 日志里
+# 连续报警很久，届时手动把 actions/* 的版本号改一下即可。
 updates:
-  # Dart / Flutter 依赖
   - package-ecosystem: pub
     directory: /
     schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
+      interval: yearly
+    # 年度复查时把能升的都摆出来（含大版本），由人判断，不由工具替人决定
+    open-pull-requests-limit: 10
     commit-message:
       prefix: "chore(deps):"
-    # 大版本升级通常要改代码，让小版本自己来、大版本手动处理
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
-
-  # GitHub Actions 本身
-  - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: monthly
-    commit-message:
-      prefix: "chore(ci):"
