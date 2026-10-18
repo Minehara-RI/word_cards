@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:word_cards/src/logic/tone.dart';
+import 'package:word_flashcards/src/logic/tone.dart';
 
 /// 翻页提示音是现算的 wav，所以文件头和采样数必须自己保证对。
 void main() {

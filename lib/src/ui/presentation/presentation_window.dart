@@ -11,7 +11,7 @@ import 'presentation_view.dart';
 import 'presentation_win32.dart';
 
 /// 主窗口和演示窗口之间的控制通道名。
-const String kPresentationChannelName = 'word_cards/presentation';
+const String kPresentationChannelName = 'word_flashcards/presentation';
 
 /// 演示窗口里的控制动作（演示窗口 -> 主窗口）。
 const String kControlPrevious = 'previous';
@@ -162,7 +162,7 @@ class _PresentationWindowAppState extends State<PresentationWindowApp> {
     );
 
     return MaterialApp(
-      title: '单词卡片 · 演示',
+      title: 'word_flashcards · 演示',
       debugShowCheckedModeBanner: false,
       home: Focus(
         autofocus: true,

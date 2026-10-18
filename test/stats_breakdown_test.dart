@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:word_cards/src/domain/models/answer_record.dart';
-import 'package:word_cards/src/domain/models/word_card.dart';
-import 'package:word_cards/src/logic/stats_breakdown.dart';
+import 'package:word_flashcards/src/domain/models/answer_record.dart';
+import 'package:word_flashcards/src/domain/models/word_card.dart';
+import 'package:word_flashcards/src/logic/stats_breakdown.dart';
 
 import 'support/test_harness.dart';
 

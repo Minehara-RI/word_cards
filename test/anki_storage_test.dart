@@ -3,11 +3,11 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqlite3/sqlite3.dart';
-import 'package:word_cards/src/data/anki/anki_schema.dart';
-import 'package:word_cards/src/domain/models/answer_record.dart';
-import 'package:word_cards/src/domain/models/app_settings.dart';
-import 'package:word_cards/src/domain/models/deck.dart';
-import 'package:word_cards/src/domain/models/word_card.dart';
+import 'package:word_flashcards/src/data/anki/anki_schema.dart';
+import 'package:word_flashcards/src/domain/models/answer_record.dart';
+import 'package:word_flashcards/src/domain/models/app_settings.dart';
+import 'package:word_flashcards/src/domain/models/deck.dart';
+import 'package:word_flashcards/src/domain/models/word_card.dart';
 
 import 'support/test_harness.dart';
 

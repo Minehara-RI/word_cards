@@ -1,7 +1,7 @@
 // ignore_for_file: prefer_interpolation_to_compose_strings
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:word_cards/src/data/import/card_parser.dart';
+import 'package:word_flashcards/src/data/import/card_parser.dart';
 
 /// 用 \u0060 拼出 Markdown 围栏，避免在源码里直接写反引号。
 const String kFence = '\u0060\u0060\u0060';

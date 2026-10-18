@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:word_cards/src/data/audio/beep_player.dart';
+import 'package:word_flashcards/src/data/audio/beep_player.dart';
 
 /// 翻页提示音可以换成用户自选的音频；文件不在了要能自动退回内置提示音。
 void main() {

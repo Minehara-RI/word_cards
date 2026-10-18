@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:word_cards/src/data/ai/ai_providers.dart';
+import 'package:word_flashcards/src/data/ai/ai_providers.dart';
 
 void main() {
   group('地址归一化', () {

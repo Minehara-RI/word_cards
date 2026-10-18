@@ -28,8 +28,8 @@ Invoke-Flutter test
 if (-not $SkipIntegration) {
     Write-Host '== integration_test (Windows) ==' -ForegroundColor Cyan
     # 集成测试第一步就是「清空全部卡片」。必须给它一个临时数据目录，
-    # 否则会拿 %APPDATA%\com.minehara\word_cards 里用户真实的词库开刀。
-    $itestDir = Join-Path ([System.IO.Path]::GetTempPath()) ('word_cards_itest_' + [guid]::NewGuid().ToString('N'))
+    # 否则会拿 %APPDATA% 里用户真实的词库开刀。
+    $itestDir = Join-Path ([System.IO.Path]::GetTempPath()) ('word_flashcards_itest_' + [guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Force -Path $itestDir | Out-Null
     try {
       Invoke-Flutter test integration_test/app_test.dart -d windows "--dart-define=WORD_CARDS_DATA_DIR=$itestDir"
@@ -38,7 +38,7 @@ if (-not $SkipIntegration) {
       Remove-Item $itestDir -Recurse -Force -ErrorAction SilentlyContinue
     }
     # 集成测试会把 Debug 可执行文件换成测试宿主，跑完重建回真正的应用，
-    # 否则手动启动 build\windows\...\word_cards.exe 打开的是测试进程。
+    # 否则手动启动 build\windows\...\word_flashcards.exe 打开的是测试进程。
     Write-Host '== 重建 Windows Debug（集成测试会覆盖 exe） ==' -ForegroundColor Cyan
     Invoke-Flutter build windows --debug
 }

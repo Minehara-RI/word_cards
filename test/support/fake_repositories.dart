@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import 'package:word_cards/src/domain/models/answer_record.dart';
-import 'package:word_cards/src/domain/models/app_settings.dart';
-import 'package:word_cards/src/domain/models/deck.dart';
-import 'package:word_cards/src/domain/models/word_card.dart';
-import 'package:word_cards/src/domain/repositories.dart';
+import 'package:word_flashcards/src/domain/models/answer_record.dart';
+import 'package:word_flashcards/src/domain/models/app_settings.dart';
+import 'package:word_flashcards/src/domain/models/deck.dart';
+import 'package:word_flashcards/src/domain/models/word_card.dart';
+import 'package:word_flashcards/src/domain/repositories.dart';
 
 /// 纯 Dart 假仓库：只用微任务，不碰真实计时器与磁盘。
 ///

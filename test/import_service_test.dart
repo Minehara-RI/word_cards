@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:word_cards/src/data/import/import_service.dart';
-import 'package:word_cards/src/domain/models/card_source.dart';
+import 'package:word_flashcards/src/data/import/import_service.dart';
+import 'package:word_flashcards/src/domain/models/card_source.dart';
 
 import 'support/test_harness.dart';
 

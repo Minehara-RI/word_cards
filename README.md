@@ -1,4 +1,4 @@
-# 单词卡片
+# word_flashcards
 
 [![CI](https://github.com/Minehara-RI/word_cards/actions/workflows/ci.yml/badge.svg)](https://github.com/Minehara-RI/word_cards/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/Minehara-RI/word_cards)](https://github.com/Minehara-RI/word_cards/releases/latest)
@@ -18,7 +18,7 @@ Android 与 Windows 都能用，**所有数据只存在本机**：不联网、�
 |---|---|
 | **加入** | 手填单张卡片；粘贴大模型返回的 JSON 批量导入（容错解析、去重、自动补干扰项）；API 直连自动生成 |
 | **作答** | 五选一限时测验；出题方向三选一（看词选义 / 看义选词 / 混合）；三种正误显示策略；桌面端数字键作答；按卡组 / 标签 / 语言决定考哪些词 |
-| **演示** | 课堂投影：另开一个强制最大化的独立窗口，每词限时自动翻页，结束后导出答案 txt（仅桌面端） |
+| **演示** | 课堂投影：桌面端另开一个强制最大化的独立窗口，手机端是应用内全屏；每词限时自动翻页，结束后导出答案 txt；**词汇来源可选**（当前卡组 / 全部词库 / 指定卡组，再按标签缩小） |
 | **统计** | 总正确率、掌握度分布、最近七天、按标签与语言拆解、最需要加强的词 |
 | **导出** | 卡片 JSON、答题记录 CSV，以及一份 Anki 能直接打开的 `collection.anki2` |
 | **词库** | 多卡组（始终有一个「当前卡组」，可在设置里重置进度或整个删除）、卡片标签、五种语言（英 / 法 / 日 / 韩 / 俄） |
@@ -27,14 +27,13 @@ Android 与 Windows 都能用，**所有数据只存在本机**：不联网、�
 
 ## 界面
 
-上方一排入口，**桌面端五个：加入 / 作答 / 演示 / 统计 / 导出**；
-**手机端只有四个：加入 / 作答 / 统计 / 导出**。
-课堂投影是「一台电脑接投影仪」的场景，手机既开不了独立演示窗口也没法投给一屋子人，
-所以「演示」整页不给 —— 入口、页面、以及设置页里那套演示深浅色一起不出现。
+上方一排入口，两端都是五个：**加入 / 作答 / 演示 / 统计 / 导出**。
+课堂投影在桌面端会另开一个最大化的独立窗口；手机上就是应用内全屏
+（讲台上把手机横过来、或者接投影线都用得上），底部按钮翻页 / 暂停。
 
-| 作答 | 加入 | 演示设置 |
+| 作答 | 加入 | 演示：词汇来源 |
 |---|---|---|
-| ![作答](docs/screenshots/13-首页-作答.png) | ![加入](docs/screenshots/14-加入页.png) | ![演示设置](docs/screenshots/15-演示设置.png) |
+| ![作答](docs/screenshots/13-首页-作答.png) | ![加入](docs/screenshots/14-加入页.png) | ![词汇来源](docs/screenshots/33-演示-词汇来源.png) |
 
 | 演示进行时（12345） | 演示进行时（ABCDE） | 统计 | 导出 |
 |---|---|---|---|
@@ -58,18 +57,19 @@ Android 与 Windows 都能用，**所有数据只存在本机**：不联网、�
 
 ### Android
 
-下载 `word_cards-<版本>.apk` 传到手机，点开安装（需要允许「安装未知来源应用」）。
+下载 `word_flashcards-<版本>.apk` 传到手机，点开安装（需要允许「安装未知来源应用」）。
 
 > 目前的 APK 用的是 **debug 签名** —— 它是合法签名，自己装、发给朋友都够用，
 > 但要上架应用商店得换成自己的 keystore，见 [构建与发布](docs/构建与发布.md)。
 
 ### Windows
 
-- `word_cards-setup-<版本>.exe`：双击安装，**会弹一次 UAC**，
-  装到 `D:\Program Files\word_cards`，装完从开始菜单「单词卡片」启动；
-- 或者解压 `word_cards-win-x64.zip`，直接跑里面的 `word_cards.exe`，免安装。
+- `word_flashcards-setup-<版本>.exe`：双击安装，**会弹一次 UAC**，
+  装到 `D:\Program Files\word_flashcards`，装完从开始菜单「word_flashcards」启动；
+- 或者解压 `word_flashcards-win-x64.zip`，直接跑里面的 `word_flashcards.exe`，免安装。
 
-卸载不会动用户数据（`%APPDATA%\com.minehara\word_cards\collection.anki2`）。
+卸载不会动用户数据（`%APPDATA%\com.minehara\word_flashcards\collection.anki2`）。
+从 1.2.x 升级时新版会自动接管旧的 `word_cards` 数据目录；想彻底干净就先卸载旧版再装。
 
 ## 上手三步
 
@@ -78,8 +78,10 @@ Android 与 Windows 都能用，**所有数据只存在本机**：不联网、�
 2. **作答** —— 在本轮设置里定好题目数量、出题方向、每题限时与正误显示方式，点开始测验；
 3. **看结果** —— 成绩单给出正确率与错题，统计页看趋势，导出页可以把词库和记录带走。
 
-课堂投影（**演示**）只有桌面端有：点「开始演示」会另开一个最大化的窗口，
-学生口头作答，屏幕上不显示任何答案，结束后自动写出答案 txt。
+课堂投影（**演示**）两端都有：先在「词汇来源」里选这一场放哪些词
+（当前卡组 / 全部词库 / 指定卡组，还能再按标签缩小），点「开始演示」——
+桌面端另开一个最大化窗口，手机端进应用内全屏。学生口头作答，
+屏幕上不显示任何答案，结束后自动写出答案 txt。
 
 ## 从源码构建
 
@@ -97,7 +99,7 @@ pwsh -File scripts\build_release.ps1     # 出 APK + Windows 免安装包 + 安�
 工具链路径集中在 `scripts\env.ps1`：它先看环境变量，再退回文件里的默认路径，最后找 PATH。
 换机器只改这一个文件（或者把 `JAVA_HOME` / `ANDROID_HOME` / `PUB_CACHE` / `GRADLE_USER_HOME` / `FLUTTER_ROOT` 设好）。
 产物都落在 `dist\`，版本号由 `pubspec.yaml` 的 `version:` 决定。
-想在浅目录留一份双击就能跑的程序，加 `-DeployTo D:\word_cards`（见[构建与发布](docs/构建与发布.md)）。
+想在浅目录留一份双击就能跑的程序，加 `-DeployTo D:\word_flashcards`（见[构建与发布](docs/构建与发布.md)）。
 
 ## 文档
 

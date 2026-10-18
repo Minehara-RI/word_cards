@@ -96,7 +96,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
       children: <Widget>[
         SectionCard(
           title: '导出',
-          subtitle: '文件会写到系统文档目录下的 word_cards_exports 文件夹。',
+          subtitle: '文件会写到系统文档目录下的 word_flashcards_exports 文件夹。',
           trailing: _busy
               ? const SizedBox(
                   width: 18,

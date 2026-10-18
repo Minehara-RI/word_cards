@@ -1,7 +1,7 @@
 // 非 FSRS 下的选题范围：默认整个卡组，需要时再按标签缩小（多标签取「与」）。
 import 'package:flutter_test/flutter_test.dart';
-import 'package:word_cards/src/domain/models/word_card.dart';
-import 'package:word_cards/src/logic/study_pool.dart';
+import 'package:word_flashcards/src/domain/models/word_card.dart';
+import 'package:word_flashcards/src/logic/study_pool.dart';
 
 import 'support/test_harness.dart';
 

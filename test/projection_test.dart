@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:word_cards/src/data/audio/beep_player.dart';
-import 'package:word_cards/src/data/export/answer_sheet_service.dart';
-import 'package:word_cards/src/domain/models/app_settings.dart';
-import 'package:word_cards/src/domain/models/quiz_direction.dart';
-import 'package:word_cards/src/domain/models/word_card.dart';
-import 'package:word_cards/src/logic/quiz.dart';
-import 'package:word_cards/src/state/projection_controller.dart';
-import 'package:word_cards/src/state/providers.dart';
+import 'package:word_flashcards/src/data/audio/beep_player.dart';
+import 'package:word_flashcards/src/data/export/answer_sheet_service.dart';
+import 'package:word_flashcards/src/domain/models/app_settings.dart';
+import 'package:word_flashcards/src/domain/models/quiz_direction.dart';
+import 'package:word_flashcards/src/domain/models/word_card.dart';
+import 'package:word_flashcards/src/logic/quiz.dart';
+import 'package:word_flashcards/src/state/projection_controller.dart';
+import 'package:word_flashcards/src/state/providers.dart';
 
 import 'support/test_harness.dart';
 

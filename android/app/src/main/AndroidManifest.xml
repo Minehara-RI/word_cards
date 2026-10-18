@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="word_cards"
+        android:label="word_flashcards"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

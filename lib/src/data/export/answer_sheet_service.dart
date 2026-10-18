@@ -23,7 +23,7 @@ class AnswerSheet {
 /// 演示答案_20261015_221530_考研词汇.txt
 class AnswerSheetService {
   /// 没有自定义目录时用的默认目录名（放在系统文档目录下）。
-  static const String defaultFolderName = 'word_cards_answers';
+  static const String defaultFolderName = 'word_flashcards_answers';
 
   Future<Directory> resolveDirectory(String? customDirectory) async {
     final String? custom = customDirectory?.trim();
@@ -82,7 +82,7 @@ class AnswerSheetService {
     required DateTime now,
   }) {
     final StringBuffer buffer = StringBuffer();
-    buffer.writeln('单词卡片 · 演示模式答案');
+    buffer.writeln('word_flashcards · 演示模式答案');
     buffer.writeln('时间：' + _readable(now));
     buffer.writeln('卡组：' + deckName);
     buffer.writeln('题数：' + questions.length.toString());

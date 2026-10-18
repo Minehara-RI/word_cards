@@ -13,6 +13,7 @@ import '../domain/models/deck.dart';
 import '../domain/models/word_card.dart';
 import '../domain/repositories.dart';
 import '../logic/fsrs.dart';
+import '../logic/projection_pool.dart';
 import '../logic/stats.dart';
 import '../logic/stats_breakdown.dart';
 import '../logic/study_pool.dart';
@@ -164,6 +165,28 @@ final studyPoolProvider = Provider<List<WordCard>>((ref) {
   final AppSettings settings = ref.watch(currentSettingsProvider);
   if (settings.usesFsrs) return cards;
   return filterCardsByTags(cards, settings.studyTagFilter);
+});
+
+/// 演示这一场从哪些词里出题（卡组范围 + 标签筛选）。
+///
+/// 刻意不复用 studyPoolProvider：两边各有一份选择，老师上课放哪个卡组
+/// 不应该顺手改掉作答页的卡组。
+final projectionScopeProvider = Provider<ProjectionScope>((ref) {
+  final AppSettings settings = ref.watch(currentSettingsProvider);
+  final List<Deck> decks = ref.watch(decksProvider).value ?? const <Deck>[];
+  // 挑中的卡组被删掉了：当作「还没挑」，退回当前卡组。
+  final String? chosen = decks.any(
+    (Deck deck) => deck.id == settings.projectionDeckId,
+  )
+      ? settings.projectionDeckId
+      : null;
+  return resolveProjectionScope(
+    cards: ref.watch(allCardsProvider).value ?? const <WordCard>[],
+    source: settings.projectionSource,
+    currentDeckId: ref.watch(selectedDeckProvider),
+    chosenDeckId: chosen,
+    tags: settings.projectionTagFilter,
+  );
 });
 
 /// 按 FSRS 排好的复习队列：最可能忘的词排在前面。

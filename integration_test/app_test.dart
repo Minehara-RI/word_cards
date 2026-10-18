@@ -2,22 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:word_cards/main.dart' as app;
-import 'package:word_cards/src/domain/models/app_settings.dart';
-import 'package:word_cards/src/domain/models/card_language.dart';
-import 'package:word_cards/src/domain/models/deck.dart';
-import 'package:word_cards/src/domain/models/word_card.dart';
-import 'package:word_cards/src/state/projection_controller.dart';
-import 'package:word_cards/src/state/providers.dart';
-import 'package:word_cards/src/state/quiz_controller.dart';
-import 'package:word_cards/src/ui/pages/add_page.dart';
-import 'package:word_cards/src/ui/pages/home_shell.dart';
-import 'package:word_cards/src/ui/pages/import_page.dart';
-import 'package:word_cards/src/ui/pages/settings_page.dart';
-import 'package:word_cards/src/ui/pages/study_page.dart';
-import 'package:word_cards/src/ui/pages/projection_page.dart';
-import 'package:word_cards/src/ui/pages/stats_page.dart';
-import 'package:word_cards/src/ui/pages/quiz_page.dart';
+import 'package:word_flashcards/main.dart' as app;
+import 'package:word_flashcards/src/domain/models/app_settings.dart';
+import 'package:word_flashcards/src/domain/models/card_language.dart';
+import 'package:word_flashcards/src/domain/models/deck.dart';
+import 'package:word_flashcards/src/domain/models/word_card.dart';
+import 'package:word_flashcards/src/state/projection_controller.dart';
+import 'package:word_flashcards/src/state/providers.dart';
+import 'package:word_flashcards/src/state/quiz_controller.dart';
+import 'package:word_flashcards/src/ui/pages/add_page.dart';
+import 'package:word_flashcards/src/ui/pages/home_shell.dart';
+import 'package:word_flashcards/src/ui/pages/import_page.dart';
+import 'package:word_flashcards/src/ui/pages/settings_page.dart';
+import 'package:word_flashcards/src/ui/pages/study_page.dart';
+import 'package:word_flashcards/src/ui/pages/projection_page.dart';
+import 'package:word_flashcards/src/ui/pages/stats_page.dart';
+import 'package:word_flashcards/src/ui/pages/quiz_page.dart';
 
 /// 在真实的 Windows 桌面窗口上跑一遍端到端：
 /// 清空数据 -> 作答页调参数（限时 / 正误 / FSRS）-> 选卡组 -> 导入带标签与语言的卡片

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:word_cards/src/domain/models/app_settings.dart';
+import 'package:word_flashcards/src/domain/models/app_settings.dart';
 
 /// 演示模式的选项编号可以选 12345 或 ABCDE。
 void main() {

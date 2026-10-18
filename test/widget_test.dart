@@ -2,7 +2,7 @@
 // 这里放一条最基础的冒烟测试，保证 `flutter test` 始终有东西可跑。
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:word_cards/src/data/import/card_parser.dart';
+import 'package:word_flashcards/src/data/import/card_parser.dart';
 
 void main() {
   test('解析器能处理最小卡片', () {

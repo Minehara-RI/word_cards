@@ -39,7 +39,7 @@ class ExportService {
   /// 导出目录放在系统文档目录下，方便用户自己找到。
   Future<Directory> exportDirectory() async {
     final Directory base = await getApplicationDocumentsDirectory();
-    final Directory directory = Directory(p.join(base.path, 'word_cards_exports'));
+    final Directory directory = Directory(p.join(base.path, 'word_flashcards_exports'));
     if (!directory.existsSync()) {
       await directory.create(recursive: true);
     }
@@ -49,7 +49,7 @@ class ExportService {
   Future<ExportResult> exportCardsJson(List<WordCard> cards) async {
     final Directory directory = await exportDirectory();
     final Map<String, Object?> payload = <String, Object?>{
-      'app': 'word_cards',
+      'app': 'word_flashcards',
       'version': 1,
       'exported_at': DateTime.now().toIso8601String(),
       'count': cards.length,

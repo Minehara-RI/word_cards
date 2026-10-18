@@ -7,11 +7,11 @@
 
     .PARAMETER AppDir
     写进安装包里的默认安装目录（用户装的时候还能在向导里改）。
-    不传就用 packaging\word_cards.iss 里的默认值 D:\Program Files\word_cards。
+    不传就用 packaging\word_flashcards.iss 里的默认值 D:\Program Files\word_flashcards。
 
     .EXAMPLE
     pwsh -File scripts\build_installer.ps1
-    pwsh -File scripts\build_installer.ps1 -AppDir 'E:\Apps\word_cards'
+    pwsh -File scripts\build_installer.ps1 -AppDir 'E:\Apps\word_flashcards'
 #>
 [CmdletBinding()]
 param(
@@ -27,7 +27,7 @@ if (-not (Test-Path $releaseDir)) {
     throw "先跑 scripts\build_windows.ps1（找不到 $releaseDir）"
 }
 
-$iss = Join-Path $script:RepoRoot 'packaging\word_cards.iss'
+$iss = Join-Path $script:RepoRoot 'packaging\word_flashcards.iss'
 if (-not (Test-Path $iss)) { throw "找不到 Inno Setup 脚本：$iss" }
 
 if (-not $Iscc) {
@@ -62,7 +62,7 @@ Write-Host "== ISCC $iss  (版本 $version$(if ($AppDir) { "，默认目录 $App
 & $Iscc @defines $iss
 if ($LASTEXITCODE -ne 0) { throw "Inno Setup 编译失败（退出码 $LASTEXITCODE）" }
 
-$setup = Get-ChildItem $dist -Filter 'word_cards-setup-*.exe' -File |
+$setup = Get-ChildItem $dist -Filter 'word_flashcards-setup-*.exe' -File |
     Sort-Object LastWriteTime -Descending | Select-Object -First 1
 if ($setup) {
     $mb = [math]::Round($setup.Length / 1MB, 1)

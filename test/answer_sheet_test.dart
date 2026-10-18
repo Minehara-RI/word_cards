@@ -2,10 +2,10 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:word_cards/src/data/export/answer_sheet_service.dart';
-import 'package:word_cards/src/domain/models/app_settings.dart';
-import 'package:word_cards/src/domain/models/quiz_direction.dart';
-import 'package:word_cards/src/logic/quiz.dart';
+import 'package:word_flashcards/src/data/export/answer_sheet_service.dart';
+import 'package:word_flashcards/src/domain/models/app_settings.dart';
+import 'package:word_flashcards/src/domain/models/quiz_direction.dart';
+import 'package:word_flashcards/src/logic/quiz.dart';
 
 import 'support/test_harness.dart';
 

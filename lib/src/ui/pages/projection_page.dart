@@ -13,6 +13,7 @@ import '../../domain/models/app_settings.dart';
 import '../../domain/models/deck.dart';
 import '../../domain/models/quiz_direction.dart';
 import '../../domain/models/word_card.dart';
+import '../../logic/projection_pool.dart';
 import '../../state/projection_controller.dart';
 import '../../state/providers.dart';
 import '../fonts.dart';
@@ -30,12 +31,20 @@ import 'presentation_page.dart';
 /// 只是屏幕上点不了，节奏由每题的停留限时控制；全程不显示答案，
 /// 答案在结束后写进一份 txt。
 ///
-/// 这一页只有桌面端会显示（手机端连入口都没有，见 home_shell.dart 的
-/// visibleHomeTabs），所以页面里不再为手机留分支。
+/// 桌面端会另开一个独立窗口（最大化、不能缩回），手机端就是应用内全屏：
+/// 讲台上把手机横过来给几个学生看、或者手机接投影线，都用得上这一页。
+/// 因此「只对桌面有意义」的东西（另开窗口、选目录）都要按平台藏起来。
 class ProjectionPage extends ConsumerStatefulWidget {
-  const ProjectionPage({super.key, required this.onGoToAdd});
+  const ProjectionPage({super.key, required this.onGoToAdd, this.target});
 
   final VoidCallback onGoToAdd;
+
+  /// 用哪个平台的样子画。平时不传（按 detectPlatformTarget() 判断），
+  /// 测试里传 PlatformTarget.mobile 就能装作自己跑在手机上。
+  ///
+  /// 注意这只决定「画不画」，不决定「能不能」：独立演示窗口能不能开
+  /// 由 supportsPresentationWindow() 说了算（测试环境里永远是假）。
+  final PlatformTarget? target;
 
   @override
   ConsumerState<ProjectionPage> createState() => _ProjectionPageState();
@@ -115,8 +124,9 @@ class _ProjectionPageState extends ConsumerState<ProjectionPage> {
   Future<void> _save(AppSettings next) =>
       ref.read(settingsRepositoryProvider).save(next);
 
-  String _deckNameNow() {
-    final String? deckId = ref.read(selectedDeckProvider);
+  /// 这一场演示的卡组名（写进答案 txt 的文件名与抬头）。
+  String _sourceName(ProjectionScope scope) {
+    final String? deckId = scope.deckId;
     if (deckId == null) return '全部词库';
     final List<Deck> decks = ref.read(decksProvider).value ?? const <Deck>[];
     for (final Deck deck in decks) {
@@ -171,18 +181,16 @@ class _ProjectionPageState extends ConsumerState<ProjectionPage> {
   }
 
   Future<void> _start() async {
-    final List<WordCard> cards = await ref
-        .read(cardRepositoryProvider)
-        .getAll(deckId: ref.read(selectedDeckProvider));
-    if (!mounted) return;
+    final ProjectionScope scope = ref.read(projectionScopeProvider);
+    final List<WordCard> cards = scope.cards;
     if (cards.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('没有可演示的卡片，先去「加入」页加几张。')),
+        const SnackBar(content: Text('这个词汇来源里没有可演示的卡片，换一个来源或者先去「加入」页加几张。')),
       );
       return;
     }
     final AppSettings settings = ref.read(currentSettingsProvider);
-    final String deckName = _deckNameNow();
+    final String deckName = _sourceName(scope);
     ref.read(projectionControllerProvider.notifier).start(
           cards,
           intervalSeconds: settings.projectionIntervalSeconds,
@@ -229,7 +237,10 @@ class _ProjectionPageState extends ConsumerState<ProjectionPage> {
   @override
   Widget build(BuildContext context) {
     final AppSettings settings = ref.watch(currentSettingsProvider);
-    final int total = ref.watch(allCardsProvider).value?.length ?? 0;
+    final ProjectionScope scope = ref.watch(projectionScopeProvider);
+    final List<Deck> decks = ref.watch(decksProvider).value ?? const <Deck>[];
+    final bool isDesktop = (widget.target ?? detectPlatformTarget()).isDesktop;
+    final int total = scope.cards.length;
 
     // 演示窗口开着的时候，控制器每跳一次就把新的一帧推过去；
     // 控制器一旦结束（放完 / 中途停），顺手把窗口也关掉。
@@ -263,17 +274,121 @@ class _ProjectionPageState extends ConsumerState<ProjectionPage> {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: <Widget>[
         SectionCard(
+          title: '词汇来源',
+          subtitle: '这一场演示放哪些词。和「作答」页各记各的：课上放别的班的卡组，'
+              '不用顺手把作答页的卡组也改掉。',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              SegmentedButton<ProjectionSource>(
+                segments: <ButtonSegment<ProjectionSource>>[
+                  for (final ProjectionSource source in ProjectionSource.values)
+                    ButtonSegment<ProjectionSource>(
+                      value: source,
+                      label: Text(source.label),
+                    ),
+                ],
+                selected: <ProjectionSource>{settings.projectionSource},
+                onSelectionChanged: (Set<ProjectionSource> value) => _save(
+                  settings.copyWith(
+                    projectionSource: value.first,
+                    // 换了来源，上一套标签多半已经对不上了，顺手清掉。
+                    projectionTagFilter: const <String>[],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                settings.projectionSource.description,
+                style: theme.textTheme.bodySmall,
+              ),
+              if (settings.projectionSource == ProjectionSource.deck) ...<Widget>[
+                const SizedBox(height: 14),
+                Text('用哪个卡组', style: theme.textTheme.labelMedium),
+                const SizedBox(height: 8),
+                if (decks.isEmpty)
+                  Text('还没有卡组，先去「加入」页开一个。', style: theme.textTheme.bodySmall)
+                else
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: <Widget>[
+                      for (final Deck deck in decks)
+                        ChoiceChip(
+                          key: Key('projection-deck-' + deck.id),
+                          label: Text(deck.name),
+                          selected: scope.deckId == deck.id,
+                          onSelected: (_) => _save(
+                            settings.copyWith(
+                              projectionDeckId: deck.id,
+                              projectionTagFilter: const <String>[],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+              ],
+              const SizedBox(height: 16),
+              Text('标签筛选（可选）', style: theme.textTheme.labelMedium),
+              const SizedBox(height: 4),
+              Text(
+                '多个标签取「与」。一个都不选就是这个来源的全部词。',
+                style: theme.textTheme.bodySmall,
+              ),
+              const SizedBox(height: 10),
+              if (scope.tags.isEmpty)
+                Text(
+                  '这个来源还没有标签。去「加入」页给词打标签，这里就会出现可选。',
+                  style: theme.textTheme.bodySmall,
+                )
+              else
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: <Widget>[
+                    for (final String tag in scope.tags)
+                      FilterChip(
+                        key: Key('projection-tag-' + tag),
+                        label: Text(tag),
+                        selected: settings.projectionTagFilter
+                            .any((String item) => item.toLowerCase() == tag.toLowerCase()),
+                        onSelected: (bool on) {
+                          final List<String> next =
+                              List<String>.of(settings.projectionTagFilter);
+                          if (on) {
+                            if (!next.any((String item) => item.toLowerCase() == tag.toLowerCase())) {
+                              next.add(tag);
+                            }
+                          } else {
+                            next.removeWhere((String item) => item.toLowerCase() == tag.toLowerCase());
+                          }
+                          _save(settings.copyWith(projectionTagFilter: next));
+                        },
+                      ),
+                  ],
+                ),
+              const SizedBox(height: 16),
+              InfoLine(
+                label: '可演示卡片',
+                value: total.toString() + ' 张',
+                icon: Icons.style_outlined,
+              ),
+              if (scope.deckId != null)
+                InfoLine(
+                  label: '这个卡组的词',
+                  value: scope.deckCards.length.toString() + ' 张',
+                  icon: Icons.folder_outlined,
+                ),
+            ],
+          ),
+        ),
+        SectionCard(
           title: '课堂演示（投影）',
           subtitle: '把题放大到全屏给学生答：一个单词五个选项，屏幕上点不了，'
               '每题停留固定秒数，到点自动换下一题；全程不显示答案。',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              InfoLine(
-                label: '可演示卡片',
-                value: total.toString() + ' 张',
-                icon: Icons.style_outlined,
-              ),
               InfoLine(
                 label: '每题停留',
                 value: settings.projectionIntervalSeconds.toString() + ' 秒',
@@ -550,8 +665,9 @@ class _ProjectionPageState extends ConsumerState<ProjectionPage> {
                 runSpacing: 12,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: <Widget>[
-                  SizedBox(
-                    width: 460,
+                  // 用 maxWidth 而不是固定 460：手机屏放不下定宽，会溢出。
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 460),
                     child: TextField(
                       key: const Key('answer-dir-field'),
                       controller: _answerDir,
@@ -566,11 +682,14 @@ class _ProjectionPageState extends ConsumerState<ProjectionPage> {
                       onTapOutside: (_) => _commitAnswerDir(settings),
                     ),
                   ),
-                  OutlinedButton.icon(
-                    onPressed: () => _pickAnswerDir(settings),
-                    icon: const Icon(Icons.drive_folder_upload_outlined),
-                    label: const Text('选择目录…'),
-                  ),
+                  // 手机上弹不出「选目录」对话框（file_selector 不支持），
+                  // 只留手填路径这条；桌面端照旧给按钮。
+                  if (isDesktop)
+                    OutlinedButton.icon(
+                      onPressed: () => _pickAnswerDir(settings),
+                      icon: const Icon(Icons.drive_folder_upload_outlined),
+                      label: const Text('选择目录…'),
+                    ),
                   TextButton.icon(
                     onPressed: () {
                       _answerDir.text = '';
@@ -583,9 +702,13 @@ class _ProjectionPageState extends ConsumerState<ProjectionPage> {
               ),
               const SizedBox(height: 6),
               Text(
-                '默认目录：系统文档目录下的 '
-                + AnswerSheetService.defaultFolderName
-                + '（Windows 上就是「文档」文件夹里）。',
+                isDesktop
+                    ? '默认目录：系统文档目录下的 '
+                        + AnswerSheetService.defaultFolderName +
+                        '（Windows 上就是「文档」文件夹里）。'
+                    : '默认目录：' +
+                        AnswerSheetService.defaultFolderName +
+                        '（应用自己的文档目录，只有本机和数据线能拿到）。',
                 style: theme.textTheme.bodySmall,
               ),
               if (answerStatus.error != null) ...<Widget>[
@@ -704,10 +827,14 @@ class _ProjectionPageState extends ConsumerState<ProjectionPage> {
                 ],
                 const SizedBox(height: 10),
                 Text(
-                  '按下开始后会另开一个最大化的演示窗口：空格暂停/继续，'
-                  '左右方向键上一题/下一题，Esc 退出。屏幕上不能点选，'
-                  '学生口头作答；全程不显示答案。窗口开不出来时会退回'
-                  '应用内全屏演示页。',
+                  isDesktop
+                      ? '按下开始后会另开一个最大化的演示窗口：空格暂停/继续，'
+                          '左右方向键上一题/下一题，Esc 退出。屏幕上不能点选，'
+                          '学生口头作答；全程不显示答案。窗口开不出来时会退回'
+                          '应用内全屏演示页。'
+                      : '按下开始后进入应用内全屏演示：底部的按钮翻页 / 暂停，'
+                          '屏幕上不能点选，学生口头作答；全程不显示答案。'
+                          '手机横过来字号自动缩放，接投影线或用来看讲台更清楚。',
                   style: theme.textTheme.bodySmall,
                 ),
               ],

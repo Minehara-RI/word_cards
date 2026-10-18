@@ -6,7 +6,7 @@ import '../../domain/models/app_settings.dart';
 import '../../domain/models/quiz_direction.dart';
 
 /// 演示窗口参数里的类型标记：只有带这个标记的窗口才是演示窗口。
-const String kPresentationWindowKind = 'word_cards.presentation';
+const String kPresentationWindowKind = 'word_flashcards.presentation';
 
 /// 演示的一道题（窗口之间传的就是这个，不带任何学习状态）。
 ///

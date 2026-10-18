@@ -3,6 +3,32 @@
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.3.0] - 2026-10-18
+
+### 变更
+
+- **程序改名为 word_flashcards**：窗口标题、开始菜单、安装目录、可执行文件、APK 与压缩包的文件名都换了。
+  安装目录变成 `D:\Program Files\word_flashcards`，Windows 界面标题栏与安装包文件名同步更新。
+  - **数据不会丢**：Windows 上数据目录跟着可执行文件的名字走（`%APPDATA%\com.minehara\<名字>`），
+    新版第一次启动时会把老的 `word_cards` 目录整个复制过来，老目录原样留着当兜底。
+  - **安卓的包名（`com.minehara.word_cards`）刻意没改**：改了就是一个全新的应用，
+    手机上原有的词库读不到，等于清空。显示名、APK 文件名已经全部是 word_flashcards。
+  - 从 1.2.x 升级 Windows 版时，想彻底干净就先卸掉开始菜单里的「单词卡片」再装新版。
+
+### 新增
+
+- **演示可以选词汇来源**：演示页最上面多了「词汇来源」，三选一 ——
+  **当前卡组**（跟着作答页走）/ **全部词库** / **指定卡组**（单独挑一个，不影响作答页），
+  还能再按标签缩小（多个标签取「与」）。这一套和作答页各记各的：
+  课上放别的班的卡组，不用顺手把作答页也改掉。可演示卡片数按来源实时算出来。
+- **安卓也有「演示」了**：以前手机端整页藏起来，现在两端都有入口。
+  手机上没有独立窗口，直接进应用内全屏：底部按钮翻页 / 暂停，全程不显示答案，
+  倒计时结束自动换下一题；答案照旧写进 txt。桌面端行为一点没变（另开最大化窗口）。
+
+### 修复
+
+- 演示页「可演示卡片」以前显示的是**整个词库**的张数，和实际出题范围对不上；现在跟着词汇来源走。
+
 ## [1.2.0] - 2026-10-18
 
 ### 新增
@@ -83,6 +109,7 @@
 - API Key 以明文存在本机 SQLite 里（本机单用户应用的取舍，界面上已注明不外传）。
 - FSRS 参数不做自优化，直接用官方包自带的那套；见 [docs/复习算法.md](docs/复习算法.md)。
 
+[1.3.0]: https://github.com/Minehara-RI/word_cards/releases/tag/v1.3.0
 [1.2.0]: https://github.com/Minehara-RI/word_cards/releases/tag/v1.2.0
 [1.1.1]: https://github.com/Minehara-RI/word_cards/releases/tag/v1.1.1
 [1.1.0]: https://github.com/Minehara-RI/word_cards/releases/tag/v1.1.0

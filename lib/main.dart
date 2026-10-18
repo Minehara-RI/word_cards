@@ -71,9 +71,41 @@ const String _dataDirOverride = String.fromEnvironment('WORD_CARDS_DATA_DIR');
 /// 数据目录：正常启动用系统给应用的位置；集成测试用临时目录。
 Future<Directory> _resolveDataDirectory() async {
   if (_dataDirOverride.isEmpty) {
-    return getApplicationSupportDirectory();
+    final Directory directory = await getApplicationSupportDirectory();
+    await _adoptRenamedAppData(directory);
+    return directory;
   }
   final Directory dir = Directory(_dataDirOverride);
   await dir.create(recursive: true);
   return dir;
+}
+
+/// 1.2.x 之前应用叫 word_cards，Windows 上的数据目录跟着这个文件名走
+/// （path_provider 用 exe 版本信息里的 CompanyName / ProductName 拼路径）。
+///
+/// 改名之后目录变成 ...\com.minehara\word_flashcards，老库就会「凭空消失」——
+/// 对一个只存本机的应用来说那就是丢数据。所以第一次启动时把老目录整个复制过来；
+/// 老目录原样留着当兜底，不删不改名。
+Future<void> _adoptRenamedAppData(Directory target) async {
+  if (!Platform.isWindows) return;
+  // 已经有库了就不动：只有「新目录还是空的」这一种情况才搬家。
+  if (File(p.join(target.path, kAnkiFileName)).existsSync()) return;
+
+  final String? appData = Platform.environment['APPDATA'];
+  if (appData == null || appData.isEmpty) return;
+  final Directory legacy =
+      Directory(p.join(appData, 'com.minehara', 'word_cards'));
+  if (!File(p.join(legacy.path, kAnkiFileName)).existsSync()) return;
+
+  await for (final FileSystemEntity entity
+      in legacy.list(recursive: true, followLinks: false)) {
+    final String relative = p.relative(entity.path, from: legacy.path);
+    final String destination = p.join(target.path, relative);
+    if (entity is Directory) {
+      await Directory(destination).create(recursive: true);
+    } else if (entity is File) {
+      await Directory(p.dirname(destination)).create(recursive: true);
+      await entity.copy(destination);
+    }
+  }
 }

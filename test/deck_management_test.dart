@@ -1,11 +1,10 @@
 // 卡组管理：「重置」只清学习进度，「删除」连词一起删。
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:word_cards/src/domain/models/answer_record.dart';
-import 'package:word_cards/src/domain/models/deck.dart';
-import 'package:word_cards/src/domain/models/word_card.dart';
-import 'package:word_cards/src/ui/pages/settings_page.dart';
-import 'package:word_cards/src/ui/platform_target.dart';
+import 'package:word_flashcards/src/domain/models/answer_record.dart';
+import 'package:word_flashcards/src/domain/models/deck.dart';
+import 'package:word_flashcards/src/domain/models/word_card.dart';
+import 'package:word_flashcards/src/ui/pages/settings_page.dart';
 
 import 'support/test_harness.dart';
 
@@ -130,7 +129,7 @@ void main() {
       await harness.cards.upsert(makeCard(id: 'c1', word: 'abandon', deckId: 'd2'));
 
       await tester.pumpWidget(harness.wrap(MaterialApp(
-        home: SettingsPage(target: PlatformTarget.mobile),
+        home: const SettingsPage(),
       )));
       await tester.pumpAndSettle();
 

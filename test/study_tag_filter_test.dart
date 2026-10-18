@@ -2,12 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:word_cards/src/domain/models/app_settings.dart';
-import 'package:word_cards/src/domain/models/word_card.dart';
-import 'package:word_cards/src/state/providers.dart';
-import 'package:word_cards/src/state/quiz_controller.dart';
-import 'package:word_cards/src/ui/pages/quiz_page.dart';
-import 'package:word_cards/src/ui/pages/study_page.dart';
+import 'package:word_flashcards/src/domain/models/app_settings.dart';
+import 'package:word_flashcards/src/domain/models/word_card.dart';
+import 'package:word_flashcards/src/state/providers.dart';
+import 'package:word_flashcards/src/state/quiz_controller.dart';
+import 'package:word_flashcards/src/ui/pages/quiz_page.dart';
+import 'package:word_flashcards/src/ui/pages/study_page.dart';
 
 import 'support/test_harness.dart';
 

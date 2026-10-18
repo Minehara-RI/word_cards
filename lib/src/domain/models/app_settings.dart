@@ -135,6 +135,31 @@ enum AnswerSheetMode {
   }
 }
 
+/// 演示（投影）从哪些词里出题。
+///
+/// 和「作答」页的选题**分开**：课上想放哪个卡组就放哪个卡组，
+/// 不必先把作答页也切过去（备课时经常要放另一个班刚学的那一组）。
+enum ProjectionSource {
+  currentDeck('current_deck', '当前卡组', '跟着「作答」页选的那个卡组走'),
+  all('all', '全部词库', '所有卡组的词混在一起出题'),
+  deck('deck', '指定卡组', '单独挑一个卡组，不影响「作答」页的选择');
+
+  const ProjectionSource(this.id, this.label, this.description);
+
+  final String id;
+  final String label;
+  final String description;
+
+  static ProjectionSource fromId(Object? value) {
+    if (value is String) {
+      for (final source in ProjectionSource.values) {
+        if (source.id == value || source.name == value) return source;
+      }
+    }
+    return ProjectionSource.currentDeck;
+  }
+}
+
 /// 演示模式翻页提示音的来源。
 enum PageTurnSoundSource {
   builtin('builtin', '内置提示音'),
@@ -171,6 +196,9 @@ class AppSettings {
     this.answerRevealMode = AnswerRevealMode.immediate,
     this.quizDirection = QuizDirection.wordToMeaning,
     this.apiCacheHours = 24,
+    this.projectionSource = ProjectionSource.currentDeck,
+    this.projectionDeckId,
+    this.projectionTagFilter = const <String>[],
     this.projectionIntervalSeconds = 5,
     this.projectionShuffle = false,
     this.projectionLoop = true,
@@ -211,7 +239,7 @@ class AppSettings {
   static const String addHomeTab = 'add';
   static const String studyHomeTab = 'study';
 
-  /// 课堂投影（演示）。手机端不显示这一页，见 visibleHomeTabs()。
+  /// 课堂投影（演示）。桌面端另开独立窗口，手机端是应用内全屏。
   static const String demoHomeTab = 'demo';
 
   static const String statsHomeTab = 'stats';
@@ -220,7 +248,7 @@ class AppSettings {
   /// 主界面停在哪个页面。应用退出后再打开，还是回到离开时的那一页。
   static const String defaultHomeTab = studyHomeTab;
 
-  /// 桌面端所有可以停留的主页面 id（手机端少一个「演示」）。
+  /// 主界面可以停留的页面 id，顺序就是入口顺序。
   static const List<String> homeTabs = <String>[
     addHomeTab,
     studyHomeTab,
@@ -281,7 +309,18 @@ class AppSettings {
   /// 出题方向：看词选义、看义选词，或者每道题在两者之间随机（混合）。
   final QuizDirection quizDirection;
 
-  // ---- 投影模式（仅桌面端）----
+  // ---- 投影模式 ----
+
+  /// 演示从哪些词里出题。
+  final ProjectionSource projectionSource;
+
+  /// [projectionSource] 为 [ProjectionSource.deck] 时专门挑的那个卡组；
+  /// 为空表示「还没挑，先用当前卡组」。
+  final String? projectionDeckId;
+
+  /// 演示再按标签缩小一遍（多个标签取「与」）；空列表表示不筛。
+  final List<String> projectionTagFilter;
+
   final int projectionIntervalSeconds;
   final bool projectionShuffle;
   final bool projectionLoop;
@@ -421,6 +460,10 @@ class AppSettings {
     AnswerRevealMode? answerRevealMode,
     QuizDirection? quizDirection,
     int? apiCacheHours,
+    ProjectionSource? projectionSource,
+    String? projectionDeckId,
+    bool clearProjectionDeckId = false,
+    List<String>? projectionTagFilter,
     int? projectionIntervalSeconds,
     bool? projectionShuffle,
     bool? projectionLoop,
@@ -463,6 +506,11 @@ class AppSettings {
       answerRevealMode: answerRevealMode ?? this.answerRevealMode,
       quizDirection: quizDirection ?? this.quizDirection,
       apiCacheHours: apiCacheHours ?? this.apiCacheHours,
+      projectionSource: projectionSource ?? this.projectionSource,
+      projectionDeckId: clearProjectionDeckId
+          ? null
+          : (projectionDeckId ?? this.projectionDeckId),
+      projectionTagFilter: projectionTagFilter ?? this.projectionTagFilter,
       projectionIntervalSeconds:
           projectionIntervalSeconds ?? this.projectionIntervalSeconds,
       projectionShuffle: projectionShuffle ?? this.projectionShuffle,
@@ -514,6 +562,9 @@ class AppSettings {
         'answer_reveal_mode': answerRevealMode.id,
         'quiz_direction': quizDirection.id,
         'api_cache_hours': apiCacheHours,
+        'projection_source': projectionSource.id,
+        'projection_deck_id': projectionDeckId,
+        'projection_tag_filter': projectionTagFilter,
         'projection_interval_seconds': projectionIntervalSeconds,
         'projection_shuffle': projectionShuffle ? 1 : 0,
         'projection_loop': projectionLoop ? 1 : 0,
@@ -568,6 +619,12 @@ class AppSettings {
         answerRevealMode: AnswerRevealMode.fromId(map['answer_reveal_mode']),
         quizDirection: QuizDirection.fromId(map['quiz_direction']),
         apiCacheHours: (map['api_cache_hours'] as num?)?.toInt() ?? 24,
+        projectionSource: ProjectionSource.fromId(map['projection_source']),
+        projectionDeckId:
+            (map['projection_deck_id'] as String?)?.trim().isEmpty ?? true
+                ? null
+                : (map['projection_deck_id'] as String).trim(),
+        projectionTagFilter: _tagList(map['projection_tag_filter']),
         projectionIntervalSeconds:
             (map['projection_interval_seconds'] as num?)?.toInt() ?? 5,
         projectionShuffle: (map['projection_shuffle'] as num?)?.toInt() == 1,

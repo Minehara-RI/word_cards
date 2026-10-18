@@ -12,7 +12,6 @@ import '../../domain/models/deck.dart';
 import '../../domain/models/word_card.dart';
 import '../../state/providers.dart';
 import '../fonts.dart';
-import '../platform_target.dart';
 import '../widgets/deck_picker.dart';
 import '../widgets/number_field.dart';
 
@@ -22,20 +21,15 @@ import '../widgets/number_field.dart';
 /// 每轮题数 / 每题限时 / 正误显示 / 复习算法这些跟一次作答直接相关的选项
 /// 全部搬到「作答」页里，改完立刻生效，不用来回跳页面。
 ///
-/// 演示模式那一套深浅色只在桌面端出现：手机端压根没有「演示」这个入口，
-/// 这一块跟着整块不画。
+/// 演示模式那一套深浅色两端都画：手机端的「演示」是应用内全屏，
+/// 教室灯亮 / 投影偏暗这两种情况一样存在。
 class SettingsPage extends ConsumerWidget {
-  const SettingsPage({super.key, this.target});
-
-  /// 用哪个平台的样子画。平时不传（按 detectPlatformTarget() 判断），
-  /// 测试里传 PlatformTarget.mobile 就能装作自己跑在手机上。
-  final PlatformTarget? target;
+  const SettingsPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AppSettings settings = ref.watch(currentSettingsProvider);
     final ThemeData theme = Theme.of(context);
-    final bool isDesktop = (target ?? detectPlatformTarget()).isDesktop;
 
     Future<void> update(AppSettings next) =>
         ref.read(settingsRepositoryProvider).save(next);
@@ -69,38 +63,35 @@ class SettingsPage extends ConsumerWidget {
                           update(settings.copyWith(themeMode: selection.first)),
                     ),
                     const SizedBox(height: 18),
-                    // 手机端没有课堂投影，演示模式这一套设置也就没有意义。
-                    if (isDesktop) ...<Widget>[
-                      Text(
-                        '演示模式（全屏投影）',
-                        style: theme.textTheme.labelLarge,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '演示时的底色单独设置，和主界面互不影响：'
-                        '教室灯亮就选浅色，投影仪偏暗或者要压低屏幕亮度就选深色。',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                      const SizedBox(height: 8),
-                      SegmentedButton<AppThemeMode>(
-                        segments: AppThemeMode.values
-                            .map(
-                              (AppThemeMode mode) => ButtonSegment<AppThemeMode>(
-                                value: mode,
-                                label: Text(mode.label),
-                              ),
-                            )
-                            .toList(growable: false),
-                        selected: <AppThemeMode>{settings.projectionThemeMode},
-                        onSelectionChanged: (Set<AppThemeMode> selection) =>
-                            update(
-                          settings.copyWith(
-                            projectionThemeMode: selection.first,
-                          ),
+                    Text(
+                      '演示模式（全屏投影）',
+                      style: theme.textTheme.labelLarge,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '演示时的底色单独设置，和主界面互不影响：'
+                      '教室灯亮就选浅色，投影仪偏暗或者要压低屏幕亮度就选深色。',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 8),
+                    SegmentedButton<AppThemeMode>(
+                      segments: AppThemeMode.values
+                          .map(
+                            (AppThemeMode mode) => ButtonSegment<AppThemeMode>(
+                              value: mode,
+                              label: Text(mode.label),
+                            ),
+                          )
+                          .toList(growable: false),
+                      selected: <AppThemeMode>{settings.projectionThemeMode},
+                      onSelectionChanged: (Set<AppThemeMode> selection) =>
+                          update(
+                        settings.copyWith(
+                          projectionThemeMode: selection.first,
                         ),
                       ),
-                      const SizedBox(height: 18),
-                    ],
+                    ),
+                    const SizedBox(height: 18),
                     Text(
                       '字号缩放：' +
                           (settings.fontScale * 100).round().toString() +
@@ -220,7 +211,7 @@ class SettingsPage extends ConsumerWidget {
                 title: '关于',
                 child: Text(
                   // kAppVersion 由 scripts\gen_version.ps1 从 pubspec.yaml 生成
-                  '单词卡片 ' +
+                  'word_flashcards ' +
                       kAppVersion +
                       '\n'
                   '所有卡片、答题记录与配置都只保存在这台设备上，'

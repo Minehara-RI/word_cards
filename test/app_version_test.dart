@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:word_cards/src/app_version.dart';
+import 'package:word_flashcards/src/app_version.dart';
 
 /// 界面「关于」里显示的版本号来自 lib/src/app_version.dart，
 /// 那个文件是 scripts/gen_version.ps1 从 pubspec.yaml 生成的。

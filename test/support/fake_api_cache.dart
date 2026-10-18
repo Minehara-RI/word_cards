@@ -1,5 +1,5 @@
-import 'package:word_cards/src/domain/models/cached_generation.dart';
-import 'package:word_cards/src/domain/repositories.dart';
+import 'package:word_flashcards/src/domain/models/cached_generation.dart';
+import 'package:word_flashcards/src/domain/repositories.dart';
 
 /// 内存版生成缓存：widget / 单元测试用，不碰磁盘。
 class FakeApiCacheRepository implements ApiCacheRepository {

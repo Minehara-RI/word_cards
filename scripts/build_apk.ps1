@@ -44,9 +44,9 @@ $version = [regex]::Match($pubspec, '(?m)^version:\s*([0-9]+\.[0-9]+\.[0-9]+)').
 if (-not $version) { $version = '0.0.0' }
 
 foreach ($apk in $built) {
-    # app-release.apk -> word_cards-1.0.0.apk；拆分包保留 ABI 后缀
+    # app-release.apk -> word_flashcards-1.0.0.apk；拆分包保留 ABI 后缀
     $abi = [regex]::Match($apk.Name, '^app-(.+)-release\.apk$').Groups[1].Value
-    $name = if ($abi) { "word_cards-$version-$abi.apk" } else { "word_cards-$version.apk" }
+    $name = if ($abi) { "word_flashcards-$version-$abi.apk" } else { "word_flashcards-$version.apk" }
     $target = Join-Path $dist $name
     Copy-Item $apk.FullName $target -Force
     $size = [math]::Round($apk.Length / 1MB, 1)

@@ -1,9 +1,9 @@
 // FSRS 的公式由官方包（dart-fsrs）负责，这里测的是本应用的适配层：
 // 状态映射、评分映射、队列排序，以及「打开 FSRS 不影响原有数据」。
 import 'package:flutter_test/flutter_test.dart';
-import 'package:word_cards/src/domain/models/fsrs_memory.dart';
-import 'package:word_cards/src/domain/models/word_card.dart';
-import 'package:word_cards/src/logic/fsrs.dart';
+import 'package:word_flashcards/src/domain/models/fsrs_memory.dart';
+import 'package:word_flashcards/src/domain/models/word_card.dart';
+import 'package:word_flashcards/src/logic/fsrs.dart';
 
 import 'support/test_harness.dart';
 

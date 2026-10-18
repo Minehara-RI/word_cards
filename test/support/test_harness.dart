@@ -2,16 +2,16 @@
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:word_cards/src/data/anki/anki_api_cache_repository.dart';
-import 'package:word_cards/src/data/anki/anki_card_repository.dart';
-import 'package:word_cards/src/data/anki/anki_collection.dart';
-import 'package:word_cards/src/data/anki/anki_deck_repository.dart';
-import 'package:word_cards/src/data/anki/anki_record_repository.dart';
-import 'package:word_cards/src/data/anki/anki_settings_repository.dart';
-import 'package:word_cards/src/domain/models/card_source.dart';
-import 'package:word_cards/src/domain/models/word_card.dart';
-import 'package:word_cards/src/domain/repositories.dart';
-import 'package:word_cards/src/state/providers.dart';
+import 'package:word_flashcards/src/data/anki/anki_api_cache_repository.dart';
+import 'package:word_flashcards/src/data/anki/anki_card_repository.dart';
+import 'package:word_flashcards/src/data/anki/anki_collection.dart';
+import 'package:word_flashcards/src/data/anki/anki_deck_repository.dart';
+import 'package:word_flashcards/src/data/anki/anki_record_repository.dart';
+import 'package:word_flashcards/src/data/anki/anki_settings_repository.dart';
+import 'package:word_flashcards/src/domain/models/card_source.dart';
+import 'package:word_flashcards/src/domain/models/word_card.dart';
+import 'package:word_flashcards/src/domain/repositories.dart';
+import 'package:word_flashcards/src/state/providers.dart';
 
 import 'fake_api_cache.dart';
 import 'fake_repositories.dart';

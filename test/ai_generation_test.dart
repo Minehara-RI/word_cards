@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:word_cards/src/data/ai/api_client.dart';
-import 'package:word_cards/src/data/ai/generation_service.dart';
-import 'package:word_cards/src/data/ai/prompt_templates.dart';
-import 'package:word_cards/src/domain/models/app_settings.dart';
-import 'package:word_cards/src/domain/models/card_language.dart';
-import 'package:word_cards/src/domain/models/cached_generation.dart';
+import 'package:word_flashcards/src/data/ai/api_client.dart';
+import 'package:word_flashcards/src/data/ai/generation_service.dart';
+import 'package:word_flashcards/src/data/ai/prompt_templates.dart';
+import 'package:word_flashcards/src/domain/models/app_settings.dart';
+import 'package:word_flashcards/src/domain/models/card_language.dart';
+import 'package:word_flashcards/src/domain/models/cached_generation.dart';
 
 import 'support/fake_api_cache.dart';
 

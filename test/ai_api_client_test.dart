@@ -6,7 +6,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:word_cards/src/data/ai/api_client.dart';
+import 'package:word_flashcards/src/data/ai/api_client.dart';
 
 /// 把一次请求「录下来」，方便断言 URL / 头 / 请求体。
 class Recorder {

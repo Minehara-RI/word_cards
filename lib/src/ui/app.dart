@@ -13,7 +13,7 @@ class WordCardsApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(currentSettingsProvider);
     return MaterialApp(
-      title: '单词卡片',
+      title: 'word_flashcards',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(Brightness.light),
       darkTheme: buildAppTheme(Brightness.dark),
