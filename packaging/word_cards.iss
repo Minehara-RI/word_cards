@@ -25,14 +25,17 @@ AppPublisher={#MyAppPublisher}
 VersionInfoVersion={#MyAppVersion}
 VersionInfoDescription={#MyAppName} 安装程序
 
-; 装进 Program Files（全机器安装）：安装时会弹一次 UAC，确认即可。
-; admin 模式下 {autopf} = C:\Program Files，配合下面的
-; ArchitecturesInstallIn64BitMode 会落到 64 位的那个目录：
-;     C:\Program Files\word_cards
-; 想只给当前用户装（不弹 UAC、装进 %LOCALAPPDATA%\Programs\word_cards）
-; 就在命令行加 /CURRENTUSER（见下面那行 override）。
-DefaultDirName={autopf}\{#MyAppNameEn}
+; 装进 D 盘的 Program Files（全机器安装）：安装时会弹一次 UAC，点「是」即可。
+;     D:\Program Files\word_cards
+; 不写 {autopf}：那是系统盘（C 盘）的 Program Files，这里要的是 D 盘。
+; 路径放在 ISPP 变量里，换机器/换盘可以覆盖：
+;     ISCC /DMyAppDir="E:\Program Files\word_cards" packaging\word_cards.iss
+#ifndef MyAppDir
+  #define MyAppDir "D:\Program Files\word_cards"
+#endif
+DefaultDirName={#MyAppDir}
 ; 开始菜单文件夹：「所有应用」里会有一个「单词卡片」，里面是启动与卸载两个快捷方式。
+; admin 安装时 {group} 落在 C:\ProgramData\Microsoft\Windows\Start Menu\Programs\
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 AllowNoIcons=yes
