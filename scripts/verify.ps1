@@ -16,6 +16,9 @@ param(
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot\env.ps1"
 
+Write-Host '== 生成版本号 ==' -ForegroundColor Cyan
+& "$PSScriptRoot\gen_version.ps1"
+
 Write-Host '== flutter analyze ==' -ForegroundColor Cyan
 Invoke-Flutter analyze
 

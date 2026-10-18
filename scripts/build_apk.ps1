@@ -17,6 +17,8 @@ param(
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot\env.ps1"
 
+& "$PSScriptRoot\gen_version.ps1"
+
 $dist = Join-Path $script:RepoRoot 'dist'
 New-Item -ItemType Directory -Force -Path $dist | Out-Null
 

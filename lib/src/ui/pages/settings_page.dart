@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app_version.dart';
 import '../../data/ai/ai_providers.dart';
 import '../../data/ai/api_client.dart';
 import '../../domain/models/app_settings.dart';
@@ -206,8 +207,10 @@ class SettingsPage extends ConsumerWidget {
               _Section(
                 title: '关于',
                 child: Text(
-                  // 版本号与 pubspec.yaml 的 version 保持一致
-                  '单词卡片 1.0.0\n'
+                  // kAppVersion 由 scripts\gen_version.ps1 从 pubspec.yaml 生成
+                  '单词卡片 ' +
+                      kAppVersion +
+                      '\n'
                   '所有卡片、答题记录与配置都只保存在这台设备上，'
                   '不联网、不上传、不需要账号。',
                   style: Theme.of(context).textTheme.bodySmall,

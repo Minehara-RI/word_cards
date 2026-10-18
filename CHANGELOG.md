@@ -7,6 +7,10 @@
 
 ### 修复
 
+- **设置页「关于」里的版本号不再写死**：以前是一行硬编码的 `1.0.0`，发了 1.1.x 也不变。
+  现在由 `scripts\gen_version.ps1` 从 `pubspec.yaml` 生成 `lib\src\app_version.dart`，
+  打包脚本先跑这一步；`test\app_version_test.dart` 负责揪出「改了版本号却忘了重新生成」。
+
 - **集成测试不再清空真实词库**：它跑的是真应用，以前用的是 `%APPDATA%` 里那份
   `collection.anki2`，而测试第一步就是「清空全部卡片」——每跑一次 `scripts\verify.ps1`
   就会把词库清空、再填回 3 张测试卡。现在测试跑在临时目录里，跑完即删。
