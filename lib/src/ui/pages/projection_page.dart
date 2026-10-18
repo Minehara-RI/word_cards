@@ -31,20 +31,12 @@ import 'presentation_page.dart';
 /// 只是屏幕上点不了，节奏由每题的停留限时控制；全程不显示答案，
 /// 答案在结束后写进一份 txt。
 ///
-/// 桌面端会另开一个独立窗口（最大化、不能缩回），手机端就是应用内全屏：
-/// 讲台上把手机横过来给几个学生看、或者手机接投影线，都用得上这一页。
-/// 因此「只对桌面有意义」的东西（另开窗口、选目录）都要按平台藏起来。
+/// 这一页只有桌面端会显示（手机端不做投屏，连入口都没有，见
+/// home_shell.dart 的 visibleHomeTabs），所以页面里不再为手机留分支。
 class ProjectionPage extends ConsumerStatefulWidget {
-  const ProjectionPage({super.key, required this.onGoToAdd, this.target});
+  const ProjectionPage({super.key, required this.onGoToAdd});
 
   final VoidCallback onGoToAdd;
-
-  /// 用哪个平台的样子画。平时不传（按 detectPlatformTarget() 判断），
-  /// 测试里传 PlatformTarget.mobile 就能装作自己跑在手机上。
-  ///
-  /// 注意这只决定「画不画」，不决定「能不能」：独立演示窗口能不能开
-  /// 由 supportsPresentationWindow() 说了算（测试环境里永远是假）。
-  final PlatformTarget? target;
 
   @override
   ConsumerState<ProjectionPage> createState() => _ProjectionPageState();
@@ -239,7 +231,6 @@ class _ProjectionPageState extends ConsumerState<ProjectionPage> {
     final AppSettings settings = ref.watch(currentSettingsProvider);
     final ProjectionScope scope = ref.watch(projectionScopeProvider);
     final List<Deck> decks = ref.watch(decksProvider).value ?? const <Deck>[];
-    final bool isDesktop = (widget.target ?? detectPlatformTarget()).isDesktop;
     final int total = scope.cards.length;
 
     // 演示窗口开着的时候，控制器每跳一次就把新的一帧推过去；
@@ -682,14 +673,11 @@ class _ProjectionPageState extends ConsumerState<ProjectionPage> {
                       onTapOutside: (_) => _commitAnswerDir(settings),
                     ),
                   ),
-                  // 手机上弹不出「选目录」对话框（file_selector 不支持），
-                  // 只留手填路径这条；桌面端照旧给按钮。
-                  if (isDesktop)
-                    OutlinedButton.icon(
-                      onPressed: () => _pickAnswerDir(settings),
-                      icon: const Icon(Icons.drive_folder_upload_outlined),
-                      label: const Text('选择目录…'),
-                    ),
+                  OutlinedButton.icon(
+                    onPressed: () => _pickAnswerDir(settings),
+                    icon: const Icon(Icons.drive_folder_upload_outlined),
+                    label: const Text('选择目录…'),
+                  ),
                   TextButton.icon(
                     onPressed: () {
                       _answerDir.text = '';
@@ -702,13 +690,9 @@ class _ProjectionPageState extends ConsumerState<ProjectionPage> {
               ),
               const SizedBox(height: 6),
               Text(
-                isDesktop
-                    ? '默认目录：系统文档目录下的 '
-                        + AnswerSheetService.defaultFolderName +
-                        '（Windows 上就是「文档」文件夹里）。'
-                    : '默认目录：' +
-                        AnswerSheetService.defaultFolderName +
-                        '（应用自己的文档目录，只有本机和数据线能拿到）。',
+                '默认目录：系统文档目录下的 '
+                + AnswerSheetService.defaultFolderName +
+                '（Windows 上就是「文档」文件夹里）。',
                 style: theme.textTheme.bodySmall,
               ),
               if (answerStatus.error != null) ...<Widget>[
@@ -827,14 +811,10 @@ class _ProjectionPageState extends ConsumerState<ProjectionPage> {
                 ],
                 const SizedBox(height: 10),
                 Text(
-                  isDesktop
-                      ? '按下开始后会另开一个最大化的演示窗口：空格暂停/继续，'
-                          '左右方向键上一题/下一题，Esc 退出。屏幕上不能点选，'
-                          '学生口头作答；全程不显示答案。窗口开不出来时会退回'
-                          '应用内全屏演示页。'
-                      : '按下开始后进入应用内全屏演示：底部的按钮翻页 / 暂停，'
-                          '屏幕上不能点选，学生口头作答；全程不显示答案。'
-                          '手机横过来字号自动缩放，接投影线或用来看讲台更清楚。',
+                  '按下开始后会另开一个最大化的演示窗口：空格暂停/继续，'
+                  '左右方向键上一题/下一题，Esc 退出。屏幕上不能点选，'
+                  '学生口头作答；全程不显示答案。窗口开不出来时会退回'
+                  '应用内全屏演示页。',
                   style: theme.textTheme.bodySmall,
                 ),
               ],

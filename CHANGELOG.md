@@ -3,6 +3,15 @@
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.3.1] - 2026-10-18
+
+### 变更
+
+- **「演示」回到桌面端专属**：1.3.0 顺手把手机端也打开了（应用内全屏），实际不需要手机投屏。
+  现在手机端重新只留 **加入 / 作答 / 统计 / 导出** 四个入口，设置页里的
+  「演示模式（全屏投影）」也一起藏起来；上次停在「演示」的话打开会落回答题页。
+  桌面端一点没变：独立窗口、词汇来源三选一（当前卡组 / 全部词库 / 指定卡组）+ 标签筛选都在。
+
 ## [1.3.0] - 2026-10-18
 
 ### 变更
@@ -109,6 +118,7 @@
 - API Key 以明文存在本机 SQLite 里（本机单用户应用的取舍，界面上已注明不外传）。
 - FSRS 参数不做自优化，直接用官方包自带的那套；见 [docs/复习算法.md](docs/复习算法.md)。
 
+[1.3.1]: https://github.com/Minehara-RI/word_cards/releases/tag/v1.3.1
 [1.3.0]: https://github.com/Minehara-RI/word_cards/releases/tag/v1.3.0
 [1.2.0]: https://github.com/Minehara-RI/word_cards/releases/tag/v1.2.0
 [1.1.1]: https://github.com/Minehara-RI/word_cards/releases/tag/v1.1.1

@@ -13,10 +13,14 @@ import 'study_page.dart';
 
 /// 主界面上要显示哪几个页面入口。
 ///
-/// 两端都是五个（加入 / 作答 / 演示 / 统计 / 导出）。桌面端的「演示」
-/// 另开一个独立窗口，手机端是应用内全屏 —— 讲台上把手机横过来、
-/// 或者手机接投影线，都是真实用法，所以入口不再按平台砍掉。
-List<String> visibleHomeTabs(PlatformTarget target) => AppSettings.homeTabs;
+/// 桌面端五个（加入 / 作答 / 演示 / 统计 / 导出）；
+/// 手机端只有四个：课堂投影是「一台电脑接投影仪」的场景，
+/// 手机不做投屏，所以「演示」整页不给 —— 入口、页面、设置一起藏。
+List<String> visibleHomeTabs(PlatformTarget target) => target.isDesktop
+    ? AppSettings.homeTabs
+    : AppSettings.homeTabs
+        .where((String id) => id != AppSettings.demoHomeTab)
+        .toList(growable: false);
 
 /// 主界面：上面一排页面入口，下面是当前页。
 ///
@@ -79,7 +83,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         );
   }
 
-  Widget _sectionAt(String id, AppSettings settings, PlatformTarget target) {
+  Widget _sectionAt(String id, AppSettings settings) {
     switch (id) {
       case AppSettings.addHomeTab:
         return const AddPage();
@@ -89,7 +93,6 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         );
       case AppSettings.demoHomeTab:
         return ProjectionPage(
-          target: target,
           onGoToAdd: () => _select(AppSettings.addHomeTab, settings),
         );
       case AppSettings.statsHomeTab:
@@ -162,7 +165,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                   children: <Widget>[
                     for (final String id in tabs)
                       _visited.contains(id)
-                          ? _sectionAt(id, settings, target)
+                          ? _sectionAt(id, settings)
                           : const SizedBox.shrink(),
                   ],
                 ),
