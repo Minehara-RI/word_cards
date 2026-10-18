@@ -3,7 +3,14 @@
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
-## [未发布]
+## [1.2.0] - 2026-10-18
+
+### 新增
+
+- **卡组可以重置和删除**：设置页「卡组」里多了「管理卡组」，每个卡组一行，显示词数与两个按钮：
+  - **重置**：只清学习进度（复习次数、掌握度、答题记录、FSRS），词一张不少；
+  - **删除**：把卡组和里面的词一起删掉，二次确认，不能恢复。
+  默认词库是兜底卡组，可以重置、不能删除；删掉当前选中的卡组会自动切回「全部词库」。
 
 ### 修复
 
@@ -76,6 +83,7 @@
 - API Key 以明文存在本机 SQLite 里（本机单用户应用的取舍，界面上已注明不外传）。
 - FSRS 参数不做自优化，直接用官方包自带的那套；见 [docs/复习算法.md](docs/复习算法.md)。
 
+[1.2.0]: https://github.com/Minehara-RI/word_cards/releases/tag/v1.2.0
 [1.1.1]: https://github.com/Minehara-RI/word_cards/releases/tag/v1.1.1
 [1.1.0]: https://github.com/Minehara-RI/word_cards/releases/tag/v1.1.0
 [1.0.0]: https://github.com/Minehara-RI/word_cards/releases/tag/v1.0.0

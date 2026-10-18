@@ -99,6 +99,32 @@ class FakeCardRepository implements CardRepository {
   }
 
   @override
+  Future<void> resetProgress({String? deckId}) async {
+    for (final MapEntry<String, WordCard> entry in _cards.entries.toList()) {
+      final WordCard card = entry.value;
+      if (deckId != null && card.deckId != deckId) continue;
+      // 重新造一张同内容的卡：学习相关的字段全部归零，fsrs 也不带。
+      _cards[entry.key] = WordCard(
+        id: card.id,
+        word: card.word,
+        definition: card.definition,
+        distractors: card.distractors,
+        phonetic: card.phonetic,
+        example: card.example,
+        partOfSpeech: card.partOfSpeech,
+        note: card.note,
+        deckId: card.deckId,
+        language: card.language,
+        tags: card.tags,
+        source: card.source,
+        createdAt: card.createdAt,
+        updatedAt: card.updatedAt,
+      );
+    }
+    _notify();
+  }
+
+  @override
   Future<int> count({String? deckId}) async => _snapshot(deckId).length;
 }
 

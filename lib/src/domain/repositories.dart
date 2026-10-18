@@ -26,6 +26,11 @@ abstract interface class CardRepository {
 
   Future<void> deleteAll({String? deckId});
 
+  /// 清掉学习进度（复习次数、掌握度、FSRS、答题记录），卡片本身保留。
+  ///
+  /// [deckId] 为空表示整个词库。
+  Future<void> resetProgress({String? deckId});
+
   Future<int> count({String? deckId});
 }
 

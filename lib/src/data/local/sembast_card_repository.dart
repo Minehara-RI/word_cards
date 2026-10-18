@@ -110,6 +110,29 @@ class SembastCardRepository implements CardRepository {
   }
 
   @override
+  Future<void> resetProgress({String? deckId}) async {
+    final snapshots =
+        await AppDatabase.cards.query(finder: _finder(deckId)).getSnapshots(_db);
+    await _db.transaction((txn) async {
+      for (final snapshot in snapshots) {
+        final Map<String, Object?> row =
+            Map<String, Object?>.of(snapshot.value);
+        row['review_count'] = 0;
+        row['correct_count'] = 0;
+        row['wrong_count'] = 0;
+        row['total_reaction_ms'] = 0;
+        row['mastery'] = 0.0;
+        row['last_reviewed_at'] = null;
+        row['next_review_at'] = null;
+        row['interval_days'] = 0;
+        row['ease_factor'] = 2.5;
+        row['fsrs'] = null;
+        await AppDatabase.cards.record(snapshot.key).put(txn, row);
+      }
+    });
+  }
+
+  @override
   Future<int> count({String? deckId}) => AppDatabase.cards.count(
         _db,
         filter: deckId == null ? null : Filter.equals('deck_id', deckId),

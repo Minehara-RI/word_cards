@@ -186,6 +186,45 @@ left join wc_card_fsrs f on f.uid = i.uid
   }
 
   @override
+  Future<void> resetProgress({String? deckId}) async {
+    final int? did = deckId == null ? null : _collection.deckIdForUid(deckId);
+    if (deckId != null && did == null) return;
+
+    // cards 按 did 圈定范围；统计表按 uid 关联，答题记录按 card_uid，revlog 按 note id。
+    final String cardsWhere = did == null ? '' : ' where did = $did';
+    final String idScope = did == null
+        ? ''
+        : ' where note_id in (select nid from cards where did = $did)';
+    final String revlogScope = did == null
+        ? ''
+        : ' where cid in (select nid from cards where did = $did)';
+
+    _db.execute('begin immediate');
+    try {
+      _db.execute('update cards set type = 0, queue = 0, due = 0, ivl = 0, '
+          'reps = 0, lapses = 0$cardsWhere');
+      _db.execute(
+        'delete from wc_card_stats where uid in '
+        '(select uid from wc_card_ids$idScope)',
+      );
+      _db.execute(
+        'delete from wc_card_fsrs where uid in '
+        '(select uid from wc_card_ids$idScope)',
+      );
+      _db.execute(
+        'delete from wc_answer_log where card_uid in '
+        '(select uid from wc_card_ids$idScope)',
+      );
+      _db.execute('delete from revlog$revlogScope');
+      _db.execute('commit');
+    } catch (_) {
+      _db.execute('rollback');
+      rethrow;
+    }
+    _collection.notify();
+  }
+
+  @override
   Future<void> deleteAll({String? deckId}) async {
     if (deckId == null) {
       _db.execute('delete from cards');

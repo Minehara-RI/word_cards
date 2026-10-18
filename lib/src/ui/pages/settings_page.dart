@@ -9,6 +9,7 @@ import '../../data/ai/api_client.dart';
 import '../../domain/models/app_settings.dart';
 import '../../domain/models/card_language.dart';
 import '../../domain/models/deck.dart';
+import '../../domain/models/word_card.dart';
 import '../../state/providers.dart';
 import '../fonts.dart';
 import '../platform_target.dart';
@@ -136,6 +137,17 @@ class SettingsPage extends ConsumerWidget {
                       '旧词不会自动搬家。',
                       style: theme.textTheme.bodySmall,
                     ),
+                    const SizedBox(height: 16),
+                    Text('管理卡组', style: theme.textTheme.labelLarge),
+                    const SizedBox(height: 2),
+                    Text(
+                      '「重置」只清学习进度（复习次数、掌握度、答题记录），词都留着；'
+                      '「删除」会把卡组和里面的词一起删掉，不能恢复。'
+                      '默认词库可以重置，不能删除。',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 4),
+                    const _DeckManager(),
                   ],
                 ),
               ),
@@ -224,7 +236,8 @@ class SettingsPage extends ConsumerWidget {
   }
 
   Future<void> _clearCards(BuildContext context, WidgetRef ref) async {
-    final bool ok = await _confirm(context, '清空全部卡片？', '所有卡片和答题记录都会被删除。');
+    final bool ok =
+        await confirmDangerous(context, '清空全部卡片？', '所有卡片和答题记录都会被删除。');
     if (!ok) return;
     await ref.read(cardRepositoryProvider).deleteAll();
     await ref.read(answerRecordRepositoryProvider).deleteAll();
@@ -235,7 +248,11 @@ class SettingsPage extends ConsumerWidget {
   }
 
   Future<void> _clearRecords(BuildContext context, WidgetRef ref) async {
-    final bool ok = await _confirm(context, '清空答题记录？', '卡片会保留，但练习次数与掌握度会被重置。');
+    final bool ok = await confirmDangerous(
+        context,
+        '清空答题记录？',
+        '卡片会保留，但练习次数与掌握度会被重置。',
+      );
     if (!ok) return;
     await ref.read(answerRecordRepositoryProvider).deleteAll();
     ref.invalidate(statsProvider);
@@ -244,32 +261,154 @@ class SettingsPage extends ConsumerWidget {
         .showSnackBar(const SnackBar(content: Text('已清空答题记录')));
   }
 
-  Future<bool> _confirm(
+}
+
+/// 危险操作的二次确认：红按钮 + 「确定 / 取消」。
+Future<bool> confirmDangerous(
+  BuildContext context,
+  String title,
+  String message,
+) async {
+  final bool? result = await showDialog<bool>(
+    context: context,
+    builder: (BuildContext dialogContext) => AlertDialog(
+      title: Text(title),
+      content: Text(message),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: Theme.of(dialogContext).colorScheme.error,
+          ),
+          onPressed: () => Navigator.of(dialogContext).pop(true),
+          child: const Text('确定'),
+        ),
+      ],
+    ),
+  );
+  return result ?? false;
+}
+
+/// 卡组管理：每个卡组一行，带词数、重置、删除。
+///
+/// 「重置」= 清学习进度（复习次数 / 掌握度 / 答题记录 / FSRS），词留着；
+/// 「删除」= 连词一起删。默认词库是兜底卡组，只能重置不能删。
+class _DeckManager extends ConsumerWidget {
+  const _DeckManager();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ThemeData theme = Theme.of(context);
+    final List<Deck> decks = ref.watch(decksProvider).value ?? const <Deck>[];
+    final List<WordCard> cards =
+        ref.watch(allCardsProvider).value ?? const <WordCard>[];
+    final String? selected = ref.watch(selectedDeckProvider);
+
+    if (decks.isEmpty) {
+      return Text('还没有卡组。', style: theme.textTheme.bodySmall);
+    }
+
+    return Column(
+      children: <Widget>[
+        for (final Deck deck in decks)
+          _deckRow(context, ref, theme, deck, cards, selected),
+      ],
+    );
+  }
+
+  Widget _deckRow(
     BuildContext context,
-    String title,
-    String message,
-  ) async {
-    final bool? result = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext dialogContext) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: <Widget>[
+    WidgetRef ref,
+    ThemeData theme,
+    Deck deck,
+    List<WordCard> cards,
+    String? selected,
+  ) {
+    final int count =
+        cards.where((WordCard card) => card.deckId == deck.id).length;
+    final bool isDefault = deck.id == Deck.defaultDeckId;
+
+    return ListTile(
+      key: Key('deck-row-' + deck.id),
+      contentPadding: EdgeInsets.zero,
+      dense: true,
+      leading: Icon(
+        selected == deck.id ? Icons.radio_button_checked : Icons.style_outlined,
+        size: 18,
+      ),
+      title: Text(deck.name, overflow: TextOverflow.ellipsis),
+      subtitle: Text(count == 0 ? '空卡组' : count.toString() + ' 个词'),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
           TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
+            key: Key('deck-reset-' + deck.id),
+            onPressed:
+                count == 0 ? null : () => _resetDeck(context, ref, deck, count),
+            child: const Text('重置'),
           ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(dialogContext).colorScheme.error,
+          if (!isDefault)
+            TextButton(
+              key: Key('deck-delete-' + deck.id),
+              style: TextButton.styleFrom(
+                foregroundColor: theme.colorScheme.error,
+              ),
+              onPressed: () => _deleteDeck(context, ref, deck, count),
+              child: const Text('删除'),
             ),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('确定'),
-          ),
         ],
       ),
     );
-    return result ?? false;
+  }
+
+  Future<void> _resetDeck(
+    BuildContext context,
+    WidgetRef ref,
+    Deck deck,
+    int count,
+  ) async {
+    final bool ok = await confirmDangerous(
+      context,
+      '重置「' + deck.name + '」？',
+      '这个词库里的 ' + count.toString() + ' 个词会保留，但复习次数、掌握度、'
+          '答题记录和 FSRS 进度全部清零，不能恢复。',
+    );
+    if (!ok) return;
+    await ref.read(cardRepositoryProvider).resetProgress(deckId: deck.id);
+    ref.invalidate(statsProvider);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('已重置「' + deck.name + '」')),
+    );
+  }
+
+  Future<void> _deleteDeck(
+    BuildContext context,
+    WidgetRef ref,
+    Deck deck,
+    int count,
+  ) async {
+    final bool ok = await confirmDangerous(
+      context,
+      '删除卡组「' + deck.name + '」？',
+      count == 0
+          ? '这个卡组是空的，删掉不影响任何词。'
+          : '里面的 ' + count.toString() + ' 个词会跟着一起删掉，不能恢复。',
+    );
+    if (!ok) return;
+    await ref.read(cardRepositoryProvider).deleteAll(deckId: deck.id);
+    await ref.read(deckRepositoryProvider).delete(deck.id);
+    if (ref.read(selectedDeckProvider) == deck.id) {
+      ref.read(selectedDeckProvider.notifier).select(null);
+    }
+    ref.invalidate(statsProvider);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('已删除「' + deck.name + '」')),
+    );
   }
 }
 
