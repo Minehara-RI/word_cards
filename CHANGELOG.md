@@ -3,6 +3,14 @@
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [未发布]
+
+### 修复
+
+- **集成测试不再清空真实词库**：它跑的是真应用，以前用的是 `%APPDATA%` 里那份
+  `collection.anki2`，而测试第一步就是「清空全部卡片」——每跑一次 `scripts\verify.ps1`
+  就会把词库清空、再填回 3 张测试卡。现在测试跑在临时目录里，跑完即删。
+
 ## [1.1.1] - 2026-10-18
 
 ### 变更

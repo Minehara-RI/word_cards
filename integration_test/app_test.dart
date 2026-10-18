@@ -27,6 +27,19 @@ import 'package:word_cards/src/ui/pages/quiz_page.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
+  // 这个测试的第一步是「清空全部卡片」，跑在真实数据目录上会把用户的词库清空
+  //（2026-10-18 就这么清过一次）。所以必须用临时目录启动：
+  //   pwsh -File scripts\verify.ps1
+  //   flutter test integration_test/app_test.dart -d windows --dart-define=WORD_CARDS_DATA_DIR=<临时目录>
+  const String dataDirOverride = String.fromEnvironment('WORD_CARDS_DATA_DIR');
+  if (dataDirOverride.isEmpty) {
+    throw StateError(
+      '集成测试必须指定临时数据目录，否则会清掉真实词库。'
+      '请跑 pwsh -File scripts\verify.ps1，或自己加 '
+      '--dart-define=WORD_CARDS_DATA_DIR=<临时目录>。',
+    );
+  }
+
   /// 桌面窗口只有 720 高，很多控件在折叠线以下，点之前必须先把它们滚进可视区。
   Future<void> tapVisible(WidgetTester tester, Finder finder) async {
     await tester.ensureVisible(finder);
