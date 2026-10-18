@@ -26,7 +26,8 @@
 param(
     [switch] $SkipVerify,
     [switch] $SkipInstaller,
-    [string] $DeployTo
+    [string] $DeployTo,
+    [string] $AppDir
 )
 
 $ErrorActionPreference = 'Stop'
@@ -39,7 +40,7 @@ if (-not $SkipVerify) {
 }
 
 & "$PSScriptRoot\build_apk.ps1"
-& "$PSScriptRoot\build_windows.ps1" -Installer:(-not $SkipInstaller) -DeployTo $DeployTo
+& "$PSScriptRoot\build_windows.ps1" -Installer:(-not $SkipInstaller) -DeployTo $DeployTo -AppDir $AppDir
 
 $dist = Join-Path $script:RepoRoot 'dist'
 $elapsed = (Get-Date) - $started

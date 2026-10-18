@@ -5,12 +5,18 @@
     需要先跑 scripts\build_windows.ps1，并且本机装了 Inno Setup 6
     （默认找 C:\Program Files (x86)\Inno Setup 6\ISCC.exe，可用 -Iscc 指定）。
 
+    .PARAMETER AppDir
+    写进安装包里的默认安装目录（用户装的时候还能在向导里改）。
+    不传就用 packaging\word_cards.iss 里的默认值 D:\Program Files\word_cards。
+
     .EXAMPLE
     pwsh -File scripts\build_installer.ps1
+    pwsh -File scripts\build_installer.ps1 -AppDir 'E:\Apps\word_cards'
 #>
 [CmdletBinding()]
 param(
-    [string] $Iscc
+    [string] $Iscc,
+    [string] $AppDir
 )
 
 $ErrorActionPreference = 'Stop'
@@ -49,8 +55,11 @@ $pubspec = Get-Content (Join-Path $script:RepoRoot 'pubspec.yaml') -Raw
 $version = [regex]::Match($pubspec, '(?m)^version:\s*([0-9]+\.[0-9]+\.[0-9]+)').Groups[1].Value
 if (-not $version) { throw 'pubspec.yaml 里读不到 version' }
 
-Write-Host "== ISCC $iss  (版本 $version) ==" -ForegroundColor Cyan
-& $Iscc "/DMyAppVersion=$version" $iss
+$defines = @("/DMyAppVersion=$version")
+if ($AppDir) { $defines += "/DMyAppDir=$AppDir" }
+
+Write-Host "== ISCC $iss  (版本 $version$(if ($AppDir) { "，默认目录 $AppDir" })) ==" -ForegroundColor Cyan
+& $Iscc @defines $iss
 if ($LASTEXITCODE -ne 0) { throw "Inno Setup 编译失败（退出码 $LASTEXITCODE）" }
 
 $setup = Get-ChildItem $dist -Filter 'word_cards-setup-*.exe' -File |

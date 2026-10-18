@@ -20,7 +20,8 @@
 [CmdletBinding()]
 param(
     [switch] $Installer,
-    [string] $DeployTo
+    [string] $DeployTo,
+    [string] $AppDir
 )
 
 $ErrorActionPreference = 'Stop'
@@ -72,7 +73,7 @@ if ($DeployTo) {
 }
 
 if ($Installer) {
-    & "$PSScriptRoot\build_installer.ps1"
+    & "$PSScriptRoot\build_installer.ps1" -AppDir $AppDir
 }
 
 Write-Host 'Windows 构建完成。' -ForegroundColor Green

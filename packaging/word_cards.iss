@@ -34,6 +34,12 @@ VersionInfoDescription={#MyAppName} 安装程序
   #define MyAppDir "D:\Program Files\word_cards"
 #endif
 DefaultDirName={#MyAppDir}
+
+; 安装目录可以自定义：向导里会显示「选择目标位置」页，想装哪儿直接改。
+; 命令行静默安装也可以指定：word_cards-setup-x.y.z.exe /VERYSILENT /DIR="E:\Apps\word_cards"
+DisableDirPage=no
+; 升级时沿用上次选定的目录，不要每次又跳回默认值。
+UsePreviousAppDir=yes
 ; 开始菜单文件夹：「所有应用」里会有一个「单词卡片」，里面是启动与卸载两个快捷方式。
 ; admin 安装时 {group} 落在 C:\ProgramData\Microsoft\Windows\Start Menu\Programs\
 DefaultGroupName={#MyAppName}
@@ -85,3 +91,12 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}
 [UninstallDelete]
 ; 只清理我们装进去的东西；用户数据在 %APPDATA% 下，卸载不碰。
 Type: filesandordirs; Name: "{app}\data"
+
+[Code]
+{ 默认装在 D 盘，但机器上要是没有 D 盘，就退回系统盘的 Program Files，
+  免得向导一打开就是个建不出来的路径。用户仍然可以自己改。 }
+procedure InitializeWizard();
+begin
+  if not DirExists('D:\') then
+    WizardForm.DirEdit.Text := ExpandConstant('{autopf}\{#MyAppNameEn}');
+end;
