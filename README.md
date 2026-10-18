@@ -97,6 +97,7 @@ pwsh -File scripts\build_release.ps1     # 出 APK + Windows 免安装包 + 安�
 工具链路径集中在 `scripts\env.ps1`：它先看环境变量，再退回文件里的默认路径，最后找 PATH。
 换机器只改这一个文件（或者把 `JAVA_HOME` / `ANDROID_HOME` / `PUB_CACHE` / `GRADLE_USER_HOME` / `FLUTTER_ROOT` 设好）。
 产物都落在 `dist\`，版本号由 `pubspec.yaml` 的 `version:` 决定。
+想在浅目录留一份双击就能跑的程序，加 `-DeployTo D:\word_cards`（见[构建与发布](docs/构建与发布.md)）。
 
 ## 文档
 

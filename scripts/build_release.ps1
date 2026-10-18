@@ -14,13 +14,19 @@
     .PARAMETER SkipInstaller
     不出 Windows 安装包（本机没装 Inno Setup 时用）。
 
+    .PARAMETER DeployTo
+    把 Windows 那份程序再放到指定目录（exe 在最外层，双击就跑），
+    适合放在 D:\word_cards 这种一眼能看见的浅位置。透传给 build_windows.ps1。
+
     .EXAMPLE
     pwsh -File scripts\build_release.ps1
+    pwsh -File scripts\build_release.ps1 -DeployTo D:\word_cards
 #>
 [CmdletBinding()]
 param(
     [switch] $SkipVerify,
-    [switch] $SkipInstaller
+    [switch] $SkipInstaller,
+    [string] $DeployTo
 )
 
 $ErrorActionPreference = 'Stop'
@@ -33,7 +39,7 @@ if (-not $SkipVerify) {
 }
 
 & "$PSScriptRoot\build_apk.ps1"
-& "$PSScriptRoot\build_windows.ps1" -Installer:(-not $SkipInstaller)
+& "$PSScriptRoot\build_windows.ps1" -Installer:(-not $SkipInstaller) -DeployTo $DeployTo
 
 $dist = Join-Path $script:RepoRoot 'dist'
 $elapsed = (Get-Date) - $started
