@@ -3,6 +3,21 @@
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.3.2] - 2026-10-18
+
+### 修复
+
+- **安卓正式包连不上 API（重要）**：`android/app/src/main/AndroidManifest.xml` 从来没声明
+  `INTERNET` 权限 —— Flutter 模板只把它放在 debug / profile 的 manifest 里（那是给热重载用的）。
+  于是 1.0.0 到 1.3.1 的 release APK 一点联网能力都没有，设置页「测试连接」永远报
+  `Failed host lookup ... errno = 7`；debug 包却一切正常，所以四个版本都没被发现。
+  现在补在 main 的 manifest 里，并加 `test/android_manifest_test.dart` 盯着，漏了 CI 会红。
+- **本地大模型也能连**：加 `android:usesCleartextTraffic="true"`。Android 9 起明文 HTTP 默认被系统拦掉，
+  而 Ollama / LM Studio 的默认地址正好是 `http://`。
+- **只填域名时自动补 `/v1`**：以前 `https://api.deepseek.com` 会被拼成
+  `https://api.deepseek.com/chat/completions`（404），现在是 `/v1/chat/completions`。
+- **域名解析失败单独给提示**：不再只有一句「检查网络或代理」，会明说「域名解析失败」。
+
 ## [1.3.1] - 2026-10-18
 
 ### 变更
@@ -118,6 +133,7 @@
 - API Key 以明文存在本机 SQLite 里（本机单用户应用的取舍，界面上已注明不外传）。
 - FSRS 参数不做自优化，直接用官方包自带的那套；见 [docs/复习算法.md](docs/复习算法.md)。
 
+[1.3.2]: https://github.com/Minehara-RI/word_cards/releases/tag/v1.3.2
 [1.3.1]: https://github.com/Minehara-RI/word_cards/releases/tag/v1.3.1
 [1.3.0]: https://github.com/Minehara-RI/word_cards/releases/tag/v1.3.0
 [1.2.0]: https://github.com/Minehara-RI/word_cards/releases/tag/v1.2.0

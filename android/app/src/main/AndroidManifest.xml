@@ -1,8 +1,18 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 生成页要直连 OpenAI 兼容接口，release 包也必须有这条权限。
+         Flutter 模板只在 debug/profile 的 manifest 里声明它（那是给热重载用的），
+         所以漏在这里 = release 包里所有联网都会报「Failed host lookup」。
+         2026-10 就是这样漏了四个版本：debug 包正常、商店/Release 的 APK 一直连不上。 -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- usesCleartextTraffic：本地大模型（Ollama / LM Studio，以及局域网里的
+         自建网关）默认就是 http://，Android 9 起不加这条会被系统直接拦成
+         「连不上 API」。只影响明文 HTTP，HTTPS 照旧校验证书。 -->
     <application
         android:label="word_flashcards"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -121,6 +121,12 @@ String chatCompletionsUrl(String baseUrl) {
   final String url = normalizeApiBaseUrl(baseUrl);
   if (url.isEmpty) return '';
   if (url.endsWith('/chat/completions')) return url;
+  // 只填了域名（https://api.deepseek.com）时补上 /v1：OpenAI 兼容接口几乎都在
+  // /v1 下面，不补的话请求会落到根路径、直接 404 —— 用户会以为「地址明明没错」。
+  final Uri? parsed = Uri.tryParse(url);
+  if (parsed != null && parsed.hasScheme && parsed.path.isEmpty) {
+    return '$url/v1/chat/completions';
+  }
   return '$url/chat/completions';
 }
 

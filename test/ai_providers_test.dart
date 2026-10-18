@@ -41,6 +41,21 @@ void main() {
         'http://127.0.0.1:11434/v1/chat/completions',
       );
     });
+
+    test('只填了域名：自动补 /v1，不然会打到根路径上 404', () {
+      expect(
+        chatCompletionsUrl('https://api.deepseek.com'),
+        'https://api.deepseek.com/v1/chat/completions',
+      );
+      expect(
+        chatCompletionsUrl('https://api.deepseek.com/'),
+        'https://api.deepseek.com/v1/chat/completions',
+      );
+      expect(
+        chatCompletionsUrl('http://192.168.1.10:1234'),
+        'http://192.168.1.10:1234/v1/chat/completions',
+      );
+    });
   });
 
   group('反查提供商', () {

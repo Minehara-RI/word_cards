@@ -189,10 +189,17 @@ class HttpAiApiClient implements AiApiClient {
     } on AiApiFailure {
       rethrow;
     } catch (error) {
+      final String detail = error.toString();
+      // 域名都解析不出来时，问题一定在本机这一侧（没网 / 代理挂了 / 系统拦了），
+      // 跟服务端无关，所以换一句更具体的「下一步」。
+      final bool dnsFailure = detail.contains('Failed host lookup') ||
+          detail.contains('nodename nor servname');
       throw AiApiFailure(
         AiFailureKind.network,
-        '连不上 API：$error',
-        hint: '检查网络或代理；本地模型要确认服务已经启动',
+        '连不上 API：$detail',
+        hint: dnsFailure
+            ? '域名解析失败：手机能上网吗？换个网络（或关掉代理）再试；地址里的域名也要写对'
+            : '检查网络或代理；本地模型要确认服务已经启动',
       );
     }
 
