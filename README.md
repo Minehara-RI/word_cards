@@ -65,8 +65,8 @@ Android 与 Windows 都能用，**所有数据只存在本机**：不联网、�
 
 ### Windows
 
-- `word_cards-setup-<版本>.exe`：双击安装。**按用户安装，不会弹 UAC**，
-  装到 `%LOCALAPPDATA%\Programs\word_cards`，从开始菜单「单词卡片」启动；
+- `word_cards-setup-<版本>.exe`：双击安装，**会弹一次 UAC**，
+  装到 `C:\Program Files\word_cards`，装完从开始菜单「单词卡片」启动；
 - 或者解压 `word_cards-win-x64.zip`，直接跑里面的 `word_cards.exe`，免安装。
 
 卸载不会动用户数据（`%APPDATA%\com.minehara\word_cards\collection.anki2`）。

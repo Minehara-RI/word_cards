@@ -25,16 +25,18 @@ AppPublisher={#MyAppPublisher}
 VersionInfoVersion={#MyAppVersion}
 VersionInfoDescription={#MyAppName} 安装程序
 
-; 按用户安装：不弹 UAC、不要管理员密码。
-; PrivilegesRequired=lowest 时 Inno 会把 {autopf} 映射成
-; %LOCALAPPDATA%\Programs，所以装到这里：
-;     C:\Users\<你>\AppData\Local\Programs\word_cards
-; 想装给全机器用的人可以自己在命令行加 /ALLUSERS（见下面那行 override）。
+; 装进 Program Files（全机器安装）：安装时会弹一次 UAC，确认即可。
+; admin 模式下 {autopf} = C:\Program Files，配合下面的
+; ArchitecturesInstallIn64BitMode 会落到 64 位的那个目录：
+;     C:\Program Files\word_cards
+; 想只给当前用户装（不弹 UAC、装进 %LOCALAPPDATA%\Programs\word_cards）
+; 就在命令行加 /CURRENTUSER（见下面那行 override）。
 DefaultDirName={autopf}\{#MyAppNameEn}
+; 开始菜单文件夹：「所有应用」里会有一个「单词卡片」，里面是启动与卸载两个快捷方式。
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 AllowNoIcons=yes
-PrivilegesRequired=lowest
+PrivilegesRequired=admin
 PrivilegesRequiredOverridesAllowed=commandline
 
 ; 应用是 x64，装到 64 位目录里
@@ -56,6 +58,11 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 #if FileExists(AddBackslash(CompilerPath) + "Languages\ChineseSimplified.isl")
 Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
 #endif
+
+[CustomMessages]
+; 官方安装包不带简体中文语言文件（ChineseSimplified.isl 是社区翻译），
+; 装出来的界面是英文；至少把开始菜单里的卸载快捷方式改成中文。
+english.UninstallProgram=卸载 %1
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked

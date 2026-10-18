@@ -3,6 +3,16 @@
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [未发布]
+
+### 变更
+
+- **Windows 安装包改为装进 `C:\Program Files\word_cards`**：全机器安装，装的时候弹一次 UAC，
+  点「是」即可；装完在开始菜单「单词卡片」里是启动与卸载两个快捷方式。
+  之前是静默装进 `%LOCALAPPDATA%\Programs\word_cards`；仍想按用户装可加 `/CURRENTUSER`。
+- `scripts\build_windows.ps1` 新增 `-DeployTo <目录>`（`build_release.ps1` 透传）：
+  构建完把整套程序镜像到指定浅目录，`word_cards.exe` 就在那一层，双击即跑。
+
 ## [1.1.0] - 2026-10-16
 
 ### 新增
