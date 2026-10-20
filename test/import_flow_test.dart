@@ -80,4 +80,46 @@ void main() {
     expect(find.textContaining('第 2 张卡片'), findsOneWidget);
     expect(find.textContaining('definition'), findsWidgets);
   });
+  testWidgets('粘贴超长 JSON：原文不进输入框，但照样能解析和导入', (tester) async {
+    useLargeSurface(tester);
+    final harness = TestHarness.fake();
+
+    await tester.pumpWidget(
+      harness.wrap(const MaterialApp(home: ImportPage())),
+    );
+    await tester.pumpAndSettle();
+
+    // 900 张卡约 6 万字符：正经的批量导入量级，但远超输入框能渲染的上限。
+    // 直接塞进 TextField 会让 Flutter 把整段文本排一次版（实测 37 万字符
+    // 就要 250 MB 内存、卡两秒多），所以这里必须挡住。
+    final buffer = StringBuffer('[');
+    for (var i = 1; i <= 900; i++) {
+      if (i > 1) buffer.write(',');
+      buffer.write('{"word":"w$i","definition":"释义 $i","distractors":["甲$i","乙$i","丙$i"]}');
+    }
+    buffer.write(']');
+    final String big = buffer.toString();
+    expect(big.length, greaterThan(24000));
+
+    await tester.enterText(find.byKey(const Key('import-json-field')), big);
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    // 原文留在状态里，输入框保持空
+    final TextField field =
+        tester.widget<TextField>(find.byKey(const Key('import-json-field')));
+    expect(field.controller!.text, isEmpty);
+    expect(find.textContaining('没有放进输入框'), findsOneWidget);
+    expect(find.textContaining('900 张卡片'), findsWidgets);
+
+    // 解析结果照常可用，导入用的也是完整原文
+    expect(find.textContaining('解析成功：900 张卡片'), findsOneWidget);
+    await tester.tap(find.text('合并到当前卡组（900 张）'));
+    await tester.pumpAndSettle();
+    expect(find.text('导入完成'), findsOneWidget);
+
+    await tester.tap(find.text('继续导入'));
+    await tester.pumpAndSettle();
+    expect(await harness.cards.getAll(), hasLength(900));
+  });
 }

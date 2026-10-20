@@ -21,6 +21,14 @@ import '../widgets/deck_picker.dart';
 import '../../state/quiz_controller.dart';
 import 'quiz_page.dart';
 
+/// 输入框里最多放多少字符。
+///
+/// Flutter 的输入框会把整段文本排一次版：实测把 37 万字符的 JSON 粘进来，
+/// 内存涨 250 MB、UI 线程卡两秒多；而「导出整库的 JSON → 再粘回导入框」
+/// 这种操作（1 MB 上下）就是 GB 级内存和几十秒卡死，Windows 直接判定窗口
+/// 「未响应」，用户看到的就是「粘贴的时候崩溃」。所以超长的原文不放进输入框。
+const int _maxFieldChars = 24000;
+
 /// 手动导入页：复制 Prompt -> 去网页聊天拿 JSON -> 粘贴 -> 校验 -> 入库。
 ///
 /// 这是「模式 A」的完整独立能力，全程不需要任何网络。
@@ -54,6 +62,9 @@ class _ImportPageState extends ConsumerState<ImportPage> {
   Timer? _debounce;
   bool _importing = false;
 
+  /// 太长而没放进输入框的原文；此时输入框是空的，解析与导入仍用这份原文。
+  String? _oversizeText;
+
   /// 当前用哪种模式：false = 网页聊天导入（模式 A），true = API 直连（模式 B）。
   bool _apiMode = false;
   bool _generating = false;
@@ -84,11 +95,75 @@ class _ImportPageState extends ConsumerState<ImportPage> {
     _debounce = Timer(const Duration(milliseconds: 250), () {
       if (!mounted) return;
       final text = _jsonController.text;
+      if (text.trim().isEmpty) {
+        // 输入框被清空：超长原文还在就留着它，否则回到空状态
+        if (_oversizeText == null) setState(() => _result = null);
+        return;
+      }
       setState(() {
-        _result = text.trim().isEmpty ? null : const CardParser().parse(text);
+        // 用户自己动了输入框，以输入框为准
+        _oversizeText = null;
+        _result = const CardParser().parse(text);
       });
     });
   }
+
+  /// 现在真正要导入的原文：优先输入框，输入框空着时用 [_oversizeText]。
+  String get _jsonText {
+    final String typed = _jsonController.text;
+    return typed.trim().isEmpty ? (_oversizeText ?? '') : typed;
+  }
+
+  /// 写入待解析的原文；超过 [_maxFieldChars] 的只记在状态里，不进输入框。
+  void _setJsonText(String text) {
+    if (text.length <= _maxFieldChars) {
+      if (_oversizeText != null) setState(() => _oversizeText = null);
+      _jsonController.text = text;
+      return;
+    }
+    _jsonController.clear();
+    _debounce?.cancel();
+    setState(() {
+      _oversizeText = text;
+      _result = const CardParser().parse(text);
+    });
+  }
+
+  void _clearJson() {
+    _debounce?.cancel();
+    _jsonController.clear();
+    setState(() {
+      _oversizeText = null;
+      _result = null;
+    });
+  }
+
+  /// 防止把超长文本塞进输入框：拦下这次输入，原文交给 [_setJsonText]。
+  ///
+  /// 键盘粘贴（Ctrl+V）和右键菜单的「粘贴」都会经过 inputFormatters，
+  /// 所以两种入口在这里一起挡住。
+  late final TextInputFormatter _oversizeGuard =
+      TextInputFormatter.withFunction((oldValue, newValue) {
+    if (newValue.text.length <= _maxFieldChars) return newValue;
+    final String text = newValue.text;
+    // 格式化器运行在输入法回调里，延后一拍再改状态，避免重入
+    scheduleMicrotask(() {
+      if (mounted) _setJsonText(text);
+    });
+    return oldValue;
+  });
+
+  /// 单词列表没有「不进输入框也照用」的余地，超长就直接拒绝并提示。
+  late final TextInputFormatter _wordsOversizeGuard =
+      TextInputFormatter.withFunction((oldValue, newValue) {
+    if (newValue.text.length <= _maxFieldChars) return newValue;
+    scheduleMicrotask(() {
+      if (mounted) {
+        _toast('粘贴内容太长了（一次最多 $_maxFieldChars 字符），请分批粘贴');
+      }
+    });
+    return oldValue;
+  });
 
   void _toast(String message) {
     ScaffoldMessenger.of(context)
@@ -113,7 +188,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
   /// [createNewDeck] 为 true 时先让用户给新卡组起个名字，这一批词就落到新卡组里；
   /// 否则合并进当前卡组。两个选择都摆在按钮上，用户自己决定。
   Future<void> _import({required bool createNewDeck}) async {
-    final text = _jsonController.text;
+    final text = _jsonText;
     if (text.trim().isEmpty) return;
 
     final CardLanguage language = _resolvedLanguage();
@@ -156,10 +231,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
         MaterialPageRoute<void>(builder: (_) => const QuizPage()),
       );
     } else if (report.importedCount > 0) {
-      setState(() {
-        _jsonController.clear();
-        _result = null;
-      });
+      _clearJson();
     }
   }
 
@@ -293,10 +365,9 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       _generating = false;
       _generation = outcome;
       _lastLatencyMs = watch.elapsedMilliseconds;
-      if (outcome.hasRawResponse) {
-        _jsonController.text = outcome.response;
-      }
     });
+    // 模型偶尔会吐很长的原文，同样不能直接塞进输入框
+    if (outcome.hasRawResponse) _setJsonText(outcome.response);
 
     if (!outcome.ok) return;
 
@@ -318,7 +389,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
 
   void _fillSample() {
     _wordsController.text = 'abandon\nmeticulous';
-    _jsonController.text = kSampleJson;
+    _setJsonText(kSampleJson);
   }
 
   @override
@@ -409,6 +480,9 @@ class _ImportPageState extends ConsumerState<ImportPage> {
                     TextField(
                       key: const Key('import-words-field'),
                       controller: _wordsController,
+                      inputFormatters: <TextInputFormatter>[
+                        _wordsOversizeGuard,
+                      ],
                       minLines: 1,
                       maxLines: _template.isBatch ? 5 : 1,
                       decoration: InputDecoration(
@@ -497,9 +571,17 @@ class _ImportPageState extends ConsumerState<ImportPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
+                    if (_oversizeText != null) ...<Widget>[
+                      _OversizeNotice(
+                        chars: _oversizeText!.length,
+                        cardCount: result?.cards.length ?? 0,
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                     TextField(
                       key: const Key('import-json-field'),
                       controller: _jsonController,
+                      inputFormatters: <TextInputFormatter>[_oversizeGuard],
                       minLines: 8,
                       maxLines: 16,
                       style: const TextStyle(
@@ -584,12 +666,8 @@ class _ImportPageState extends ConsumerState<ImportPage> {
                         ),
                         const SizedBox(width: 12),
                         TextButton(
-                          onPressed: _jsonController.text.isEmpty
-                              ? null
-                              : () {
-                                  _jsonController.clear();
-                                  setState(() => _result = null);
-                                },
+                          onPressed:
+                              _jsonText.trim().isEmpty ? null : _clearJson,
                           child: const Text('清空'),
                         ),
                       ],
@@ -605,6 +683,67 @@ class _ImportPageState extends ConsumerState<ImportPage> {
   }
 
   ColorScheme schemeOf(BuildContext context) => Theme.of(context).colorScheme;
+}
+
+/// 把字符数说成好读的量级（原文动辄几十万字符）。
+String _humanChars(int n) {
+  if (n >= 10000) return (n / 10000).toStringAsFixed(1) + ' 万字符';
+  if (n >= 1000) return (n / 1000).toStringAsFixed(1) + ' 千字符';
+  return n.toString() + ' 字符';
+}
+
+/// 超长原文的说明条：原文没进输入框，但照样会参与解析与导入。
+class _OversizeNotice extends StatelessWidget {
+  const _OversizeNotice({required this.chars, required this.cardCount});
+
+  final int chars;
+  final int cardCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final String limit = (_maxFieldChars / 10000).toStringAsFixed(1);
+    final String countNote = cardCount > 0 ? '（$cardCount 张卡片）' : '';
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: scheme.secondaryContainer.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Icon(
+            Icons.content_paste_off_outlined,
+            size: 18,
+            color: scheme.primary,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  '已读取 ' + _humanChars(chars) + ' 原文' + countNote + '，没有放进输入框',
+                  style: theme.textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '输入框只放得下 ' + limit + ' 万字符以内的原文，更长的会把窗口卡死。'
+                  '这份原文会完整参与解析与导入，直接点下面的按钮就行；'
+                  '想重新粘贴就先点「清空」。',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// 一行灰色提示（比如「还没配 API」）。
@@ -874,13 +1013,23 @@ class _ValidationPanel extends StatelessWidget {
             ],
             if (current.warnings.isNotEmpty) ...<Widget>[
               const SizedBox(height: 8),
-              ...current.warnings.map(
-                (warning) => Text(
-                  '提醒：' + warning,
+              // 一条提醒一行，几百张卡时能列出上千行、把页面顶出上万像素，
+              // 所以只显示前几条，其余合并成一句。
+              ...current.warnings.take(3).map(
+                    (warning) => Text(
+                      '提醒：' + warning,
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: const Color(0xFFB45309)),
+                    ),
+                  ),
+              if (current.warnings.length > 3)
+                Text(
+                  '…还有 ' +
+                      (current.warnings.length - 3).toString() +
+                      ' 条提醒（不影响导入）',
                   style: theme.textTheme.bodySmall
                       ?.copyWith(color: const Color(0xFFB45309)),
                 ),
-              ),
             ],
           ],
         ),
