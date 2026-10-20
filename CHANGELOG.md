@@ -3,6 +3,23 @@
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.4.0] - 2026-10-20
+
+### 新增
+
+- **直接导入 Anki 的 `.anki2`**：加入页多了「导入 Anki 库（.anki2）」。
+  选文件 → 预览（多少条笔记、落到哪些卡组、字段怎么对应）→ 一键入库。
+  - 字段按笔记类型的名字认（单词 / 释义 / 音标 / 例句 / 词性 / 备注，中英文都认），
+    认不出来时按 Anki 的默认约定取第 1、2 列；HTML、`[sound:…]`、填空标记都会清掉。
+  - **新旧库都支持**：schema 18（Anki 23.10 起，字段在 `notetypes` / `fields` 表里）
+    与 schema 11（字段在 `col.models` 的 JSON 里）都能读。
+  - 选项 / 答案式的练习型笔记类型会被整类跳过（它们不是单词卡），并报告跳过了多少条。
+  - 卡组跟着搬（`父::子` → `父 / 子`），也可以选「全部放进当前卡组」。
+  - 复习次数、忘记次数、间隔、ease、上次复习时间一起读出来，导入后不是「全新卡片」。
+  - 标签可选；`lang::xx` 自动转成卡片语言。同名单词默认跳过，也可以选择覆盖内容。
+  - 只读打开源文件；`.apkg` 会明确提示先解压出 `collection.anki2`。
+- 卡片的来源多了一种「Anki导入」，卡片列表里能直接看出来。
+
 ## [1.3.2] - 2026-10-18
 
 ### 修复
@@ -133,6 +150,7 @@
 - API Key 以明文存在本机 SQLite 里（本机单用户应用的取舍，界面上已注明不外传）。
 - FSRS 参数不做自优化，直接用官方包自带的那套；见 [docs/复习算法.md](docs/复习算法.md)。
 
+[1.4.0]: https://github.com/Minehara-RI/word_cards/releases/tag/v1.4.0
 [1.3.2]: https://github.com/Minehara-RI/word_cards/releases/tag/v1.3.2
 [1.3.1]: https://github.com/Minehara-RI/word_cards/releases/tag/v1.3.1
 [1.3.0]: https://github.com/Minehara-RI/word_cards/releases/tag/v1.3.0

@@ -6,6 +6,7 @@ import '../data/anki/anki_collection.dart';
 import '../data/audio/beep_player.dart';
 import '../data/export/answer_sheet_service.dart';
 import '../data/export/export_service.dart';
+import '../data/import/anki_import.dart';
 import '../data/import/import_service.dart';
 import '../domain/models/answer_record.dart';
 import '../domain/models/app_settings.dart';
@@ -41,6 +42,14 @@ final settingsRepositoryProvider = Provider<SettingsRepository>(
 
 final importServiceProvider = Provider<ImportService>(
   (ref) => ImportService(
+    cards: ref.watch(cardRepositoryProvider),
+    decks: ref.watch(deckRepositoryProvider),
+  ),
+);
+
+/// Anki 的 .anki2 导入（读取 + 入库）。
+final ankiImportServiceProvider = Provider<AnkiImportService>(
+  (ref) => AnkiImportService(
     cards: ref.watch(cardRepositoryProvider),
     decks: ref.watch(deckRepositoryProvider),
   ),

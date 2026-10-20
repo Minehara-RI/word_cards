@@ -4,7 +4,9 @@
 /// [source] 仅用于统计与排查（例如“这张卡是 API 生成的还是粘贴导入的”）。
 enum CardSource {
   manualImport('manual_import', '手动导入'),
-  api('api', 'API 生成');
+  api('api', 'API 生成'),
+  // 标签里不能有空格（Anki 按空格切标签），所以这里也写成连着的。
+  anki('anki', 'Anki导入');
 
   const CardSource(this.id, this.label);
 

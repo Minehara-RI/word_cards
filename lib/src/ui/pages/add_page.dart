@@ -12,6 +12,7 @@ import '../../domain/models/word_card.dart';
 import '../../state/providers.dart';
 import '../widgets/deck_picker.dart';
 import '../widgets/section_card.dart';
+import 'anki_import_page.dart';
 import 'card_list_page.dart';
 import 'import_page.dart';
 
@@ -299,6 +300,16 @@ class _AddPageState extends ConsumerState<AddPage> {
                 ),
                 icon: const Icon(Icons.download_outlined),
                 label: const Text('粘贴 JSON 批量导入'),
+              ),
+              OutlinedButton.icon(
+                key: const Key('add-anki-import'),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const AnkiImportPage(),
+                  ),
+                ),
+                icon: const Icon(Icons.library_books_outlined),
+                label: const Text('导入 Anki 库（.anki2）'),
               ),
               OutlinedButton.icon(
                 onPressed: () => Navigator.of(context).push(
