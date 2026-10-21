@@ -264,7 +264,15 @@ Map<String, Object?> ankiDefaultDeckConfig() => <String, Object?>{
     };
 
 /// col.decks 里的单个牌组。
-Map<String, Object?> ankiDeck(int id, String name, int nowSec) =>
+///
+/// [suspended] 是应用自己的扩展键（[kAnkiSuspendedKey]），Anki 不认识，
+/// 但会原样保留在 JSON 里；写成 1 而不是 true，和这里的其它布尔字段一致。
+Map<String, Object?> ankiDeck(
+  int id,
+  String name,
+  int nowSec, {
+  bool suspended = false,
+}) =>
     <String, Object?>{
       'id': id,
       'mod': nowSec,
@@ -281,7 +289,11 @@ Map<String, Object?> ankiDeck(int id, String name, int nowSec) =>
       'browserCollapsed': false,
       'extendNew': 10,
       'extendRev': 50,
+      if (suspended) kAnkiSuspendedKey: 1,
     };
+
+/// 牌组 JSON 里表示「已挂起」的扩展键。
+const String kAnkiSuspendedKey = 'wcSuspended';
 
 /// col.models 里的笔记类型。
 Map<String, Object?> ankiNotetype(int nowSec) {

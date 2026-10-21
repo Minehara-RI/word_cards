@@ -8,6 +8,7 @@ import '../../domain/models/app_settings.dart';
 import '../../domain/models/answer_record.dart';
 import '../../domain/models/quiz_direction.dart';
 import '../../domain/models/word_card.dart';
+import '../../logic/fsrs.dart';
 import '../../logic/quiz.dart';
 import '../../state/providers.dart';
 import '../../state/quiz_controller.dart';
@@ -112,8 +113,21 @@ class _QuizPageState extends ConsumerState<QuizPage> {
               QuizStatus.finished => _ResultView(
                   state: state,
                   onRestart: () {
-                    final deckId = ref.read(selectedDeckProvider);
-                    controller.start(deckId: deckId);
+                    // 「再来一轮」沿用本轮筛选：卡组并集 + 标签筛选都在
+                    // studyPoolProvider 里算好了，别退回「当前卡组」。
+                    final AppSettings settings =
+                        ref.read(currentSettingsProvider);
+                    final List<WordCard> cards = settings.usesFsrs
+                        ? ref
+                            .read(fsrsQueueProvider)
+                            .map((FsrsQueueItem item) => item.card)
+                            .toList(growable: false)
+                        : ref.read(studyPoolProvider);
+                    controller.startWithCards(
+                      cards,
+                      questionCount: settings.quizQuestionCount,
+                      shuffle: !settings.usesFsrs,
+                    );
                   },
                 ),
               _ => _QuestionView(

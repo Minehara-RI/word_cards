@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/ai/api_client.dart';
+import '../data/ai/card_completion.dart';
 import '../data/ai/generation_service.dart';
 import '../data/anki/anki_collection.dart';
 import '../data/audio/beep_player.dart';
@@ -70,6 +71,14 @@ final aiApiClientProvider = Provider<AiApiClient>((ref) {
   ref.onDispose(client.close);
   return client;
 });
+
+/// 「AI 补全」：只补齐非必填项，只走 API（没有复制 Prompt 那条退路）。
+final cardCompletionServiceProvider = Provider<CardCompletionService>(
+  (ref) => CardCompletionService(
+    client: ref.watch(aiApiClientProvider),
+    cache: ref.watch(apiCacheRepositoryProvider),
+  ),
+);
 
 /// 模式 B 的编排（Prompt → 缓存 → 请求 → 解析 → 写缓存）。
 final generationServiceProvider = Provider<GenerationService>(
@@ -160,48 +169,76 @@ final deckCardsProvider = Provider<List<WordCard>>((ref) {
   return ref.watch(cardsProvider).value ?? const <WordCard>[];
 });
 
-/// 当前卡组里出现过的标签（标签筛选面板的候选）。
+/// 当前卡组里出现过的标签（加入页的标签候选）。
 final deckTagsProvider = Provider<List<String>>((ref) {
   return deckTags(ref.watch(deckCardsProvider));
 });
 
-/// 本轮出题的候选池。
+/// 已挂起的卡组 id。
 ///
-/// - 原有算法：当前卡组的全部词，再按标签筛一遍（标签筛选只在这里生效）；
-/// - FSRS-6：原样返回整个卡组，复习哪些词由 FSRS 自己按记忆状态决定。
-final studyPoolProvider = Provider<List<WordCard>>((ref) {
-  final List<WordCard> cards = ref.watch(deckCardsProvider);
-  final AppSettings settings = ref.watch(currentSettingsProvider);
-  if (settings.usesFsrs) return cards;
-  return filterCardsByTags(cards, settings.studyTagFilter);
+/// 挂起 = 不作答、不进学习概览，但演示照样能选（见 projection_pool.dart）。
+final suspendedDeckIdsProvider = Provider<Set<String>>((ref) {
+  final List<Deck> decks = ref.watch(decksProvider).value ?? const <Deck>[];
+  return <String>{
+    for (final Deck deck in decks)
+      if (deck.suspended) deck.id,
+  };
 });
+
+/// 本轮作答的出题范围：卡组并集 + 标签筛选，已挂起的卡组自动排除。
+final studyScopeProvider = Provider<StudyScope>((ref) {
+  final AppSettings settings = ref.watch(currentSettingsProvider);
+  return resolveStudyScope(
+    allCards: ref.watch(allCardsProvider).value ?? const <WordCard>[],
+    decks: ref.watch(decksProvider).value ?? const <Deck>[],
+    selectedDeckIds: settings.quizDeckIds,
+    currentDeckId: ref.watch(selectedDeckProvider),
+    tags: settings.studyTagFilter,
+    match: settings.tagMatchMode,
+  );
+});
+
+/// 本轮出题的候选池（已经按卡组与标签筛过）。
+///
+/// 两套算法都用它：FSRS-6 只是把这份候选池按记忆状态排序，
+/// 不再自己另看一份「整个卡组」。
+final studyPoolProvider = Provider<List<WordCard>>(
+  (ref) => ref.watch(studyScopeProvider).cards,
+);
+
+/// 筛选范围内出现过的标签（作答页的标签候选）。
+final studyTagsProvider = Provider<List<String>>(
+  (ref) => ref.watch(studyScopeProvider).tags,
+);
 
 /// 演示这一场从哪些词里出题（卡组范围 + 标签筛选）。
 ///
 /// 刻意不复用 studyPoolProvider：两边各有一份选择，老师上课放哪个卡组
-/// 不应该顺手改掉作答页的卡组。
+/// 不应该顺手改掉作答页的卡组。演示也不排除已挂起的卡组。
 final projectionScopeProvider = Provider<ProjectionScope>((ref) {
   final AppSettings settings = ref.watch(currentSettingsProvider);
-  final List<Deck> decks = ref.watch(decksProvider).value ?? const <Deck>[];
-  // 挑中的卡组被删掉了：当作「还没挑」，退回当前卡组。
-  final String? chosen = decks.any(
-    (Deck deck) => deck.id == settings.projectionDeckId,
-  )
-      ? settings.projectionDeckId
-      : null;
+  // 挑中的卡组可能已经被删掉：只保留还存在的，全没了就当「还没挑」，
+  // 由 resolveProjectionScope 退回当前卡组（课上不至于当场放空）。
+  final Set<String> known = <String>{
+    for (final Deck deck in ref.watch(decksProvider).value ?? const <Deck>[])
+      deck.id,
+  };
   return resolveProjectionScope(
     cards: ref.watch(allCardsProvider).value ?? const <WordCard>[],
     source: settings.projectionSource,
     currentDeckId: ref.watch(selectedDeckProvider),
-    chosenDeckId: chosen,
+    chosenDeckIds: settings.projectionDeckIds
+        .where((String id) => known.contains(id))
+        .toList(growable: false),
     tags: settings.projectionTagFilter,
+    match: settings.tagMatchMode,
   );
 });
 
 /// 按 FSRS 排好的复习队列：最可能忘的词排在前面。
 final fsrsQueueProvider = Provider<List<FsrsQueueItem>>((ref) {
   return buildFsrsQueue(
-    ref.watch(deckCardsProvider),
+    ref.watch(studyPoolProvider),
     now: DateTime.now(),
     config: ref.watch(fsrsConfigProvider),
   );
@@ -210,9 +247,100 @@ final fsrsQueueProvider = Provider<List<FsrsQueueItem>>((ref) {
 /// 今天到期（含从未学过的新词）的卡片数。
 final fsrsDueCountProvider = Provider<int>((ref) {
   return countFsrsDue(
-    ref.watch(deckCardsProvider),
+    ref.watch(studyPoolProvider),
     now: DateTime.now(),
     config: ref.watch(fsrsConfigProvider),
+  );
+});
+
+/// 「学习概览」要显示的数据：范围内的卡片 + 统计。
+class OverviewSummary {
+  const OverviewSummary({
+    required this.cards,
+    required this.stats,
+    required this.label,
+    required this.scope,
+  });
+
+  static const OverviewSummary empty = OverviewSummary(
+    cards: <WordCard>[],
+    stats: StudyStats.empty,
+    label: '总概览',
+    scope: OverviewScope.all,
+  );
+
+  final List<WordCard> cards;
+  final StudyStats stats;
+
+  /// 范围名字：总概览 / 全部词库 / 某个卡组的名字。
+  final String label;
+
+  final OverviewScope scope;
+}
+
+/// 学习概览的统计。
+///
+/// 总概览排除已挂起的卡组；当前卡组只看自己。答题记录也按卡片范围筛一遍，
+/// 否则「当前卡组」的今日答题数会把别的卡组的也算进来。
+///
+/// 这里 watch 了一下 statsProvider：清空答题记录只会 invalidate 它，
+/// 卡片流不会变，不挂上这层依赖的话概览数字会停在旧值。
+final overviewSummaryProvider = FutureProvider<OverviewSummary>((ref) async {
+  ref.watch(statsProvider);
+  final List<WordCard> cards = await ref.watch(allCardsProvider.future);
+  final List<Deck> decks = await ref.watch(decksProvider.future);
+  final AppSettings settings = ref.watch(currentSettingsProvider);
+  final String? currentDeckId = ref.watch(selectedDeckProvider);
+
+  final Set<String> suspended = <String>{
+    for (final Deck deck in decks)
+      if (deck.suspended) deck.id,
+  };
+
+  final bool currentOnly = settings.overviewScope == OverviewScope.currentDeck &&
+      currentDeckId != null;
+
+  // 当前卡组自己也被挂起时，「当前卡组」这一档同样是空的：
+  // 挂起的意思是「这段时间不算它」，换个口径看统计也不该把它算进来。
+  final List<WordCard> scoped = currentOnly
+      ? (suspended.contains(currentDeckId)
+          ? const <WordCard>[]
+          : cards
+              .where((WordCard card) => card.deckId == currentDeckId)
+              .toList(growable: false))
+      : cards
+          .where((WordCard card) => !suspended.contains(card.deckId))
+          .toList(growable: false);
+
+  String label;
+  if (currentOnly) {
+    label = '当前卡组';
+    for (final Deck deck in decks) {
+      if (deck.id == currentDeckId) label = deck.name;
+    }
+  } else {
+    label = settings.overviewScope == OverviewScope.currentDeck
+        ? '全部词库'
+        : '总概览';
+  }
+
+  final Set<String> ids =
+      scoped.map((WordCard card) => card.id).toSet();
+  final List<AnswerRecord> records =
+      await ref.watch(answerRecordRepositoryProvider).getAll();
+  final List<AnswerRecord> scopedRecords = records
+      .where((AnswerRecord record) => ids.contains(record.cardId))
+      .toList(growable: false);
+
+  return OverviewSummary(
+    cards: scoped,
+    stats: computeStats(
+      cards: scoped,
+      records: scopedRecords,
+      now: DateTime.now(),
+    ),
+    label: label,
+    scope: settings.overviewScope,
   );
 });
 

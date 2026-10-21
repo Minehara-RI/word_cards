@@ -37,6 +37,7 @@ class AnkiDeckRepository implements DeckRepository {
         createdAt: DateTime.fromMillisecondsSinceEpoch(
           ((json['mod'] as num?)?.toInt() ?? 0) * 1000,
         ),
+        suspended: (json[kAnkiSuspendedKey] as num?)?.toInt() == 1,
       ));
     }
     return result;
@@ -46,7 +47,30 @@ class AnkiDeckRepository implements DeckRepository {
   Future<void> upsert(Deck deck) async {
     final int ankiId = _collection.ensureDeckId(deck.id);
     final int nowSec = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    _collection.putDeckJson(ankiDeck(ankiId, deck.name, nowSec));
+
+    // 在原有 JSON 上改，而不是整条重写：牌组里的每日计数（revToday 之类）
+    // 是 Anki 自己的状态，重写会把它们抹掉。挂起/恢复也不该顺手清一次。
+    Map<String, Object?>? existing;
+    for (final Map<String, Object?> json in _collection.deckJsonList()) {
+      if ((json['id'] as num?)?.toInt() == ankiId) {
+        existing = json;
+        break;
+      }
+    }
+
+    final Map<String, Object?> next = existing == null
+        ? ankiDeck(ankiId, deck.name, nowSec, suspended: deck.suspended)
+        : Map<String, Object?>.of(existing);
+    next['id'] = ankiId;
+    next['name'] = deck.name;
+    next['mod'] = nowSec;
+    if (deck.suspended) {
+      next[kAnkiSuspendedKey] = 1;
+    } else {
+      next.remove(kAnkiSuspendedKey);
+    }
+
+    _collection.putDeckJson(next);
     _collection.notify();
   }
 

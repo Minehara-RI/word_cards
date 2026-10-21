@@ -21,6 +21,7 @@ import '../platform_target.dart';
 import '../presentation/presentation_launcher.dart';
 import '../presentation/presentation_window.dart';
 import '../theme.dart';
+import '../widgets/deck_tag_filter.dart';
 import '../widgets/number_field.dart';
 import '../widgets/section_card.dart';
 import 'presentation_page.dart';
@@ -117,9 +118,13 @@ class _ProjectionPageState extends ConsumerState<ProjectionPage> {
       ref.read(settingsRepositoryProvider).save(next);
 
   /// 这一场演示的卡组名（写进答案 txt 的文件名与抬头）。
+  ///
+  /// 多个卡组时写「N 个卡组」：文件名里塞一串卡组名既太长又不好认。
   String _sourceName(ProjectionScope scope) {
-    final String? deckId = scope.deckId;
-    if (deckId == null) return '全部词库';
+    final List<String>? ids = scope.deckIds;
+    if (ids == null || ids.isEmpty) return '全部词库';
+    if (ids.length > 1) return ids.length.toString() + '个卡组';
+    final String deckId = ids.single;
     final List<Deck> decks = ref.read(decksProvider).value ?? const <Deck>[];
     for (final Deck deck in decks) {
       if (deck.id == deckId) return deck.name;
@@ -295,78 +300,85 @@ class _ProjectionPageState extends ConsumerState<ProjectionPage> {
               ),
               if (settings.projectionSource == ProjectionSource.deck) ...<Widget>[
                 const SizedBox(height: 14),
-                Text('用哪个卡组', style: theme.textTheme.labelMedium),
+                Text('用哪些卡组（可多选，取并集）',
+                    style: theme.textTheme.labelMedium),
+                const SizedBox(height: 4),
+                Text(
+                  '一个都不选就跟当前卡组走。已挂起的卡组在这里照样能选 ——'
+                  '挂起只是「不安排复习」，不影响课堂上放它。',
+                  style: theme.textTheme.bodySmall,
+                ),
                 const SizedBox(height: 8),
                 if (decks.isEmpty)
                   Text('还没有卡组，先去「加入」页开一个。', style: theme.textTheme.bodySmall)
                 else
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: <Widget>[
-                      for (final Deck deck in decks)
-                        ChoiceChip(
-                          key: Key('projection-deck-' + deck.id),
-                          label: Text(deck.name),
-                          selected: scope.deckId == deck.id,
-                          onSelected: (_) => _save(
-                            settings.copyWith(
-                              projectionDeckId: deck.id,
-                              projectionTagFilter: const <String>[],
-                            ),
-                          ),
-                        ),
-                    ],
+                  DeckFilterChips(
+                    decks: decks,
+                    selectedIds: settings.projectionDeckIds,
+                    keyPrefix: 'projection-deck',
+                    onToggle: (Deck deck, bool on) {
+                      final List<String> next =
+                          List<String>.of(settings.projectionDeckIds);
+                      if (on) {
+                        if (!next.contains(deck.id)) next.add(deck.id);
+                      } else {
+                        next.remove(deck.id);
+                      }
+                      _save(settings.copyWith(projectionDeckIds: next));
+                    },
                   ),
               ],
               const SizedBox(height: 16),
               Text('标签筛选（可选）', style: theme.textTheme.labelMedium),
               const SizedBox(height: 4),
               Text(
-                '多个标签取「与」。一个都不选就是这个来源的全部词。',
+                '当前口径：' +
+                    settings.tagMatchMode.label +
+                    '（' +
+                    settings.tagMatchMode.description +
+                    '），在设置页可以改。一个都不选就是这个来源的全部词。',
                 style: theme.textTheme.bodySmall,
               ),
               const SizedBox(height: 10),
-              if (scope.tags.isEmpty)
-                Text(
-                  '这个来源还没有标签。去「加入」页给词打标签，这里就会出现可选。',
-                  style: theme.textTheme.bodySmall,
-                )
-              else
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: <Widget>[
-                    for (final String tag in scope.tags)
-                      FilterChip(
-                        key: Key('projection-tag-' + tag),
-                        label: Text(tag),
-                        selected: settings.projectionTagFilter
-                            .any((String item) => item.toLowerCase() == tag.toLowerCase()),
-                        onSelected: (bool on) {
-                          final List<String> next =
-                              List<String>.of(settings.projectionTagFilter);
-                          if (on) {
-                            if (!next.any((String item) => item.toLowerCase() == tag.toLowerCase())) {
-                              next.add(tag);
-                            }
-                          } else {
-                            next.removeWhere((String item) => item.toLowerCase() == tag.toLowerCase());
-                          }
-                          _save(settings.copyWith(projectionTagFilter: next));
-                        },
-                      ),
-                  ],
-                ),
+              TagFilterChips(
+                tags: scope.tags,
+                selected: settings.projectionTagFilter,
+                keyPrefix: 'projection-tag',
+                onToggle: (String tag, bool on) async {
+                  final List<String> next = List<String>.of(
+                    ref.read(currentSettingsProvider).projectionTagFilter,
+                  );
+                  TagMatchMode? asked;
+                  if (on) {
+                    if (!next.any((String item) =>
+                        item.toLowerCase() == tag.toLowerCase())) {
+                      next.add(tag);
+                    }
+                    // 第一次勾标签才问「并集还是交集」，两个页面共用这一档。
+                    asked = await askTagMatchModeIfNeeded(context, ref);
+                  } else {
+                    next.removeWhere(
+                      (String item) => item.toLowerCase() == tag.toLowerCase(),
+                    );
+                  }
+                  if (!mounted) return;
+                  final AppSettings latest = ref.read(currentSettingsProvider);
+                  await _save(latest.copyWith(
+                    projectionTagFilter: next,
+                    tagMatchMode: asked ?? latest.tagMatchMode,
+                    tagMatchAsked: latest.tagMatchAsked || asked != null,
+                  ));
+                },
+              ),
               const SizedBox(height: 16),
               InfoLine(
                 label: '可演示卡片',
                 value: total.toString() + ' 张',
                 icon: Icons.style_outlined,
               ),
-              if (scope.deckId != null)
+              if (scope.deckIds != null)
                 InfoLine(
-                  label: '这个卡组的词',
+                  label: '选定范围里的词',
                   value: scope.deckCards.length.toString() + ' 张',
                   icon: Icons.folder_outlined,
                 ),

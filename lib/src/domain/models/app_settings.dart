@@ -142,7 +142,7 @@ enum AnswerSheetMode {
 enum ProjectionSource {
   currentDeck('current_deck', '当前卡组', '跟着「作答」页选的那个卡组走'),
   all('all', '全部词库', '所有卡组的词混在一起出题'),
-  deck('deck', '指定卡组', '单独挑一个卡组，不影响「作答」页的选择');
+  deck('deck', '指定卡组', '单独挑几个卡组（并集），不影响「作答」页的选择');
 
   const ProjectionSource(this.id, this.label, this.description);
 
@@ -180,6 +180,54 @@ enum PageTurnSoundSource {
   }
 }
 
+/// 多个标签之间怎么组合。
+///
+/// 这是**全局**偏好，作答页与演示页共用：同一个词表在两个页面里
+/// 「选两个标签」的含义应该一致，分开设只会让人记不住自己选过什么。
+enum TagMatchMode {
+  any('any', '并集', '带上其中任意一个标签就入选'),
+  all('all', '交集', '必须同时带上所有选中的标签');
+
+  const TagMatchMode(this.id, this.label, this.description);
+
+  final String id;
+  final String label;
+  final String description;
+
+  static TagMatchMode fromId(Object? value) {
+    if (value is String) {
+      for (final mode in TagMatchMode.values) {
+        if (mode.id == value || mode.name == value) return mode;
+      }
+    }
+    return TagMatchMode.any;
+  }
+}
+
+/// 「学习概览」看的是哪个范围。
+///
+/// 总概览会把**已挂起的卡组**排除在外：挂起的意思就是「这段时间不算它」，
+/// 计数里还带着它就失去意义了。
+enum OverviewScope {
+  all('all', '总概览', '整个词库，但不含已挂起的卡组'),
+  currentDeck('current_deck', '当前卡组', '只看当前卡组里的词');
+
+  const OverviewScope(this.id, this.label, this.description);
+
+  final String id;
+  final String label;
+  final String description;
+
+  static OverviewScope fromId(Object? value) {
+    if (value is String) {
+      for (final scope in OverviewScope.values) {
+        if (scope.id == value || scope.name == value) return scope;
+      }
+    }
+    return OverviewScope.all;
+  }
+}
+
 /// 用户配置：AI 提供商、限时与反馈方式、投影间隔、界面偏好等。
 ///
 /// 全部存在本机，不随任何请求上传。
@@ -192,12 +240,16 @@ class AppSettings {
     this.preferManualMode = false,
     this.quizQuestionCount = allQuestions,
     this.studyTagFilter = const <String>[],
+    this.quizDeckIds = const <String>[],
+    this.tagMatchMode = TagMatchMode.any,
+    this.tagMatchAsked = false,
+    this.overviewScope = OverviewScope.all,
     this.questionTimeLimitSeconds = 10,
     this.answerRevealMode = AnswerRevealMode.immediate,
     this.quizDirection = QuizDirection.wordToMeaning,
     this.apiCacheHours = 24,
     this.projectionSource = ProjectionSource.currentDeck,
-    this.projectionDeckId,
+    this.projectionDeckIds = const <String>[],
     this.projectionTagFilter = const <String>[],
     this.projectionIntervalSeconds = 5,
     this.projectionShuffle = false,
@@ -291,11 +343,28 @@ class AppSettings {
   /// 每轮出多少题。取值 [allQuestions]（0）表示出全部，见 [quizAllQuestions]。
   final int quizQuestionCount;
 
-  /// 本轮只出带这些标签的词；多个标签之间是「与」。
+  /// 本轮只出带这些标签的词；多个标签按 [tagMatchMode] 取并集或交集。
   ///
-  /// 只在「原有算法」下参与选题（FSRS-6 的复习队列不看它）。
-  /// 空列表表示不筛，用当前卡组的全部词。
+  /// 空列表表示不筛。两套算法都看它：FSRS-6 也是先筛出候选词，
+  /// 再按记忆状态排序 —— 「这一轮只考第四单元」在哪种算法下都得算数。
   final List<String> studyTagFilter;
+
+  /// 本轮从哪些卡组里出题（多选取并集）。空列表表示跟随当前卡组。
+  ///
+  /// 空列表不是「什么都不考」，而是「跟随当前卡组」：这样老用户的
+  /// 行为一点没变，想跨卡组合并复习时再手动勾。
+  final List<String> quizDeckIds;
+
+  /// 多标签取并集还是交集，见 [TagMatchMode]。
+  final TagMatchMode tagMatchMode;
+
+  /// 有没有问过「并集还是交集」。
+  ///
+  /// 第一次勾标签时才弹窗问，问过之后不再打扰；设置页随时能改。
+  final bool tagMatchAsked;
+
+  /// 「学习概览」看总概览还是当前卡组。
+  final OverviewScope overviewScope;
 
   /// 每道题的作答限时（秒）。到点没作答就判超时并强制进入下一题。
   ///
@@ -314,9 +383,11 @@ class AppSettings {
   /// 演示从哪些词里出题。
   final ProjectionSource projectionSource;
 
-  /// [projectionSource] 为 [ProjectionSource.deck] 时专门挑的那个卡组；
+  /// [projectionSource] 为 [ProjectionSource.deck] 时专门挑的那些卡组（并集）；
   /// 为空表示「还没挑，先用当前卡组」。
-  final String? projectionDeckId;
+  ///
+  /// 允许挑多个：一节复习课常常要同时放「上周学的」和「上上周学的」两组词。
+  final List<String> projectionDeckIds;
 
   /// 演示再按标签缩小一遍（多个标签取「与」）；空列表表示不筛。
   final List<String> projectionTagFilter;
@@ -456,13 +527,16 @@ class AppSettings {
     bool? preferManualMode,
     int? quizQuestionCount,
     List<String>? studyTagFilter,
+    List<String>? quizDeckIds,
+    TagMatchMode? tagMatchMode,
+    bool? tagMatchAsked,
+    OverviewScope? overviewScope,
     int? questionTimeLimitSeconds,
     AnswerRevealMode? answerRevealMode,
     QuizDirection? quizDirection,
     int? apiCacheHours,
     ProjectionSource? projectionSource,
-    String? projectionDeckId,
-    bool clearProjectionDeckId = false,
+    List<String>? projectionDeckIds,
     List<String>? projectionTagFilter,
     int? projectionIntervalSeconds,
     bool? projectionShuffle,
@@ -501,15 +575,17 @@ class AppSettings {
       preferManualMode: preferManualMode ?? this.preferManualMode,
       quizQuestionCount: quizQuestionCount ?? this.quizQuestionCount,
       studyTagFilter: studyTagFilter ?? this.studyTagFilter,
+      quizDeckIds: quizDeckIds ?? this.quizDeckIds,
+      tagMatchMode: tagMatchMode ?? this.tagMatchMode,
+      tagMatchAsked: tagMatchAsked ?? this.tagMatchAsked,
+      overviewScope: overviewScope ?? this.overviewScope,
       questionTimeLimitSeconds:
           questionTimeLimitSeconds ?? this.questionTimeLimitSeconds,
       answerRevealMode: answerRevealMode ?? this.answerRevealMode,
       quizDirection: quizDirection ?? this.quizDirection,
       apiCacheHours: apiCacheHours ?? this.apiCacheHours,
       projectionSource: projectionSource ?? this.projectionSource,
-      projectionDeckId: clearProjectionDeckId
-          ? null
-          : (projectionDeckId ?? this.projectionDeckId),
+      projectionDeckIds: projectionDeckIds ?? this.projectionDeckIds,
       projectionTagFilter: projectionTagFilter ?? this.projectionTagFilter,
       projectionIntervalSeconds:
           projectionIntervalSeconds ?? this.projectionIntervalSeconds,
@@ -558,12 +634,16 @@ class AppSettings {
         'prefer_manual_mode': preferManualMode ? 1 : 0,
         'quiz_question_count': quizQuestionCount,
         'study_tag_filter': studyTagFilter,
+        'quiz_deck_ids': quizDeckIds,
+        'tag_match_mode': tagMatchMode.id,
+        'tag_match_asked': tagMatchAsked ? 1 : 0,
+        'overview_scope': overviewScope.id,
         'question_time_limit_seconds': questionTimeLimitSeconds,
         'answer_reveal_mode': answerRevealMode.id,
         'quiz_direction': quizDirection.id,
         'api_cache_hours': apiCacheHours,
         'projection_source': projectionSource.id,
-        'projection_deck_id': projectionDeckId,
+        'projection_deck_ids': projectionDeckIds,
         'projection_tag_filter': projectionTagFilter,
         'projection_interval_seconds': projectionIntervalSeconds,
         'projection_shuffle': projectionShuffle ? 1 : 0,
@@ -614,16 +694,20 @@ class AppSettings {
         preferManualMode: (map['prefer_manual_mode'] as num?)?.toInt() == 1,
         quizQuestionCount: questionCount,
         studyTagFilter: _tagList(map['study_tag_filter']),
+        quizDeckIds: _tagList(map['quiz_deck_ids']),
+        tagMatchMode: TagMatchMode.fromId(map['tag_match_mode']),
+        tagMatchAsked: (map['tag_match_asked'] as num?)?.toInt() == 1,
+        overviewScope: OverviewScope.fromId(map['overview_scope']),
         questionTimeLimitSeconds:
             (map['question_time_limit_seconds'] as num?)?.toInt() ?? 10,
         answerRevealMode: AnswerRevealMode.fromId(map['answer_reveal_mode']),
         quizDirection: QuizDirection.fromId(map['quiz_direction']),
         apiCacheHours: (map['api_cache_hours'] as num?)?.toInt() ?? 24,
         projectionSource: ProjectionSource.fromId(map['projection_source']),
-        projectionDeckId:
-            (map['projection_deck_id'] as String?)?.trim().isEmpty ?? true
-                ? null
-                : (map['projection_deck_id'] as String).trim(),
+        // 老版本存的是单个 projection_deck_id，读到就当成只有一个元素的列表。
+        projectionDeckIds: map.containsKey('projection_deck_ids')
+            ? _tagList(map['projection_deck_ids'])
+            : _tagList(<Object?>[map['projection_deck_id']]),
         projectionTagFilter: _tagList(map['projection_tag_filter']),
         projectionIntervalSeconds:
             (map['projection_interval_seconds'] as num?)?.toInt() ?? 5,

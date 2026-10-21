@@ -148,6 +148,56 @@ const List<PromptTemplate> kPromptTemplates = <PromptTemplate>[
   ),
 ];
 
+/// 「AI 补全」用的 Prompt：只补非必填项，不重写单词与释义。
+///
+/// 和上面的模板不同，它不生成整张卡片，只生成「缺的那几格」；
+/// 干扰项特意要求「容易混淆」而不是「随便给四个错的」——
+/// 一眼假的选项会让测验失去意义。
+String buildCompletionPrompt({
+  required String word,
+  required String definition,
+  required CardLanguage language,
+  String? existingPhonetic,
+  String? existingPartOfSpeech,
+  String? existingExample,
+  String? existingNote,
+  List<String> existingDistractors = const <String>[],
+}) {
+  const String nl = '\n';
+  final List<String> known = <String>[
+    if ((existingPhonetic ?? '').trim().isNotEmpty)
+      '已有音标：${existingPhonetic!.trim()}',
+    if ((existingPartOfSpeech ?? '').trim().isNotEmpty)
+      '已有词性：${existingPartOfSpeech!.trim()}',
+    if ((existingExample ?? '').trim().isNotEmpty)
+      '已有例句：${existingExample!.trim()}',
+    if ((existingNote ?? '').trim().isNotEmpty)
+      '已有备注：${existingNote!.trim()}',
+    if (existingDistractors.isNotEmpty)
+      '已有干扰项：${existingDistractors.join(' / ')}',
+  ];
+  final String knownBlock =
+      known.isEmpty ? '' : nl + known.join(nl) + nl + nl;
+
+  return '''你是一位资深${language.label}词汇教研员。下面这张单词卡已经有单词和释义，请补齐其余字段。
+
+单词：${word.trim()}
+释义：${definition.trim()}
+$knownBlock要求：
+1. phonetic：给${language.phoneticHint}；拿不准就给最接近的常见读音，不要编造。
+2. partOfSpeech：词性，用英文小写（noun / verb / adjective / adverb / phrase），必须与释义一致。
+3. example：一个地道的${language.exampleLanguage}例句，必须体现释义里的第一个义项，8-20 个词，不要翻译。
+4. note：一句中文记忆提示（词根、搭配、近义辨析任选其一），不超过 40 字，不要重复释义。
+5. distractors：4 条中文干扰释义，要求：
+   - 与正确释义词性相同、字数相近、常见程度相近；
+   - 优先挑**学习者容易与它混淆**的释义：形近词、同义但不等同、同一个语义场里的词；
+   - 绝不能与正确释义同义，也不能包含正确释义；
+   - 不要「以上都对」「以上都不对」这类选项。
+6. 只输出一个 JSON 对象，字段名严格照下面写。不要解释、不要 Markdown 代码块、不要多余文字。
+
+{"phonetic":"/.../","partOfSpeech":"verb","example":"...","note":"...","distractors":["...","...","...","..."]}''';
+}
+
 /// 按 id 取模板；找不到时退回第一个。
 PromptTemplate promptTemplateById(String? id) {
   for (final template in kPromptTemplates) {

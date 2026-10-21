@@ -1,12 +1,11 @@
-// 非 FSRS 下默认出当前卡组的全部词，并且支持按标签筛（多标签取「与」）。
+// 作答页的筛选：卡组多选并集、标签并集/交集、自定义题数。
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:word_flashcards/src/domain/models/app_settings.dart';
+import 'package:word_flashcards/src/domain/models/deck.dart';
 import 'package:word_flashcards/src/domain/models/word_card.dart';
 import 'package:word_flashcards/src/state/providers.dart';
-import 'package:word_flashcards/src/state/quiz_controller.dart';
-import 'package:word_flashcards/src/ui/pages/quiz_page.dart';
 import 'package:word_flashcards/src/ui/pages/study_page.dart';
 
 import 'support/test_harness.dart';
@@ -30,8 +29,9 @@ List<WordCard> taggedCards() => <WordCard>[
 void main() {
   Future<TestHarness> boot(
     WidgetTester tester, {
-    SchedulerMode mode = SchedulerMode.legacy,
+    AppSettings? settings,
     List<WordCard>? cards,
+    List<Deck>? decks,
   }) async {
     tester.view.physicalSize = const Size(1400, 3600);
     tester.view.devicePixelRatio = 1.0;
@@ -39,7 +39,12 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final TestHarness harness = TestHarness.fake();
-    await harness.settings.save(AppSettings(schedulerMode: mode));
+    if (decks != null) {
+      for (final Deck deck in decks) {
+        await harness.decks.upsert(deck);
+      }
+    }
+    await harness.settings.save(settings ?? const AppSettings());
     await harness.cards.upsertAll(cards ?? taggedCards());
     await tester.pumpWidget(
       ProviderScope(
@@ -61,7 +66,7 @@ void main() {
   ChoiceChip choiceChip(WidgetTester tester, String label) =>
       tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, label));
 
-  testWidgets('非 FSRS 默认选「全部」，题数档位仍然可以手选', (tester) async {
+  testWidgets('默认选「全部」，5 / 10 / 20 与自定义题数并存', (tester) async {
     final TestHarness harness = await boot(tester);
 
     expect((await harness.settings.load()).quizAllQuestions, isTrue);
@@ -74,31 +79,67 @@ void main() {
     expect((await harness.settings.load()).quizQuestionCount, 10);
     expect(choiceChip(tester, '10 题').selected, isTrue);
 
-    await tester.tap(find.widgetWithText(ChoiceChip, '全部（3）'));
+    // 档位之外的题数也能填：37 题
+    await tester.enterText(find.byKey(const Key('quiz-count-field')), '37');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+    expect((await harness.settings.load()).quizQuestionCount, 37);
+    expect(choiceChip(tester, '10 题').selected, isFalse);
+    expect(choiceChip(tester, '全部（3）').selected, isFalse);
+
+    // 填 0 = 全部
+    await tester.enterText(find.byKey(const Key('quiz-count-field')), '0');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pumpAndSettle();
     expect((await harness.settings.load()).quizAllQuestions, isTrue);
-    expect(choiceChip(tester, '全部（3）').selected, isTrue);
   });
 
-  testWidgets('标签多选取「与」：筛成 0 个时开始按钮禁用，清空后恢复', (tester) async {
+  testWidgets('第一次勾标签先问并集还是交集，选并集后两个标签取并集', (tester) async {
     final TestHarness harness = await boot(tester);
-
-    expect(find.widgetWithText(FilterChip, '第四单元'), findsOneWidget);
-    expect(find.widgetWithText(FilterChip, 'E2E'), findsOneWidget);
 
     await tester.tap(find.widgetWithText(FilterChip, '第四单元'));
     await tester.pumpAndSettle();
-    expect((await harness.settings.load()).studyTagFilter, <String>['第四单元']);
-    expect(choiceChip(tester, '全部（2）').selected, isTrue);
-    expect(find.textContaining('已选 第四单元：2 / 3 个词'), findsOneWidget);
+    expect(find.text('同时选多个标签时'), findsOneWidget);
 
-    // 两个标签没有词同时带上：池子空了，开始按钮点不动
+    await tester.tap(find.byKey(const Key('tag-match-any')));
+    await tester.pumpAndSettle();
+
+    AppSettings saved = await harness.settings.load();
+    expect(saved.studyTagFilter, <String>['第四单元']);
+    expect(saved.tagMatchMode, TagMatchMode.any);
+    expect(saved.tagMatchAsked, isTrue);
+    expect(choiceChip(tester, '全部（2）').selected, isTrue);
+
+    // 并集：再加上 E2E，三个词全入选（不再是 0）
     await tester.tap(find.widgetWithText(FilterChip, 'E2E'));
     await tester.pumpAndSettle();
-    expect(
-      (await harness.settings.load()).studyTagFilter,
-      <String>['第四单元', 'E2E'],
+    saved = await harness.settings.load();
+    expect(saved.studyTagFilter, <String>['第四单元', 'E2E']);
+    expect(choiceChip(tester, '全部（3）').selected, isTrue);
+    // 问过一次之后不再弹
+    expect(find.text('同时选多个标签时'), findsNothing);
+
+    await tester.tap(find.text('清空筛选'));
+    await tester.pumpAndSettle();
+    expect((await harness.settings.load()).studyTagFilter, isEmpty);
+    expect(choiceChip(tester, '全部（3）').selected, isTrue);
+  });
+
+  testWidgets('交集：两个标签要同时带上，筛成 0 个时开始按钮禁用', (tester) async {
+    await boot(
+      tester,
+      settings: const AppSettings(
+        tagMatchAsked: true,
+        tagMatchMode: TagMatchMode.all,
+      ),
     );
+
+    await tester.tap(find.widgetWithText(FilterChip, '第四单元'));
+    await tester.pumpAndSettle();
+    expect(choiceChip(tester, '全部（2）').selected, isTrue);
+
+    await tester.tap(find.widgetWithText(FilterChip, 'E2E'));
+    await tester.pumpAndSettle();
     expect(choiceChip(tester, '全部（0）').selected, isTrue);
     expect(find.textContaining('一个词都不剩'), findsOneWidget);
     final FilledButton start =
@@ -107,8 +148,6 @@ void main() {
 
     await tester.tap(find.text('清空筛选'));
     await tester.pumpAndSettle();
-    expect((await harness.settings.load()).studyTagFilter, isEmpty);
-    expect(choiceChip(tester, '全部（3）').selected, isTrue);
     expect(
       tester
           .widget<FilledButton>(find.widgetWithText(FilledButton, '开始测验'))
@@ -117,68 +156,58 @@ void main() {
     );
   });
 
-  testWidgets('标签筛选只认非 FSRS：开着 FSRS 时整块藏起来，队列还是整个卡组', (tester) async {
-    final TestHarness harness = await boot(tester);
-    await harness.settings.save(
-      const AppSettings(studyTagFilter: <String>['第四单元']),
-    );
-    await tester.pumpAndSettle();
-    expect(find.widgetWithText(FilterChip, '第四单元'), findsOneWidget);
-
-    // 切到 FSRS：控件整块不画，但选择留在设置里，切回来才生效
-    await harness.settings.save(
-      const AppSettings(
-        schedulerMode: SchedulerMode.fsrs,
-        studyTagFilter: <String>['第四单元'],
+  testWidgets('卡组多选取并集，已挂起的卡组不出现在作答页', (tester) async {
+    final List<WordCard> cards = <WordCard>[
+      makeCard(id: 'c1', word: 'abandon'),
+      makeCard(id: 'c2', word: 'meticulous', deckId: 'd1'),
+      makeCard(id: 'c3', word: 'resilient', deckId: 'd2'),
+      makeCard(id: 'c4', word: 'loyal', deckId: 'd3'),
+    ];
+    final List<Deck> decks = <Deck>[
+      Deck(id: 'd1', name: '第一册', createdAt: DateTime(2026, 1, 1)),
+      Deck(id: 'd2', name: '第二册', createdAt: DateTime(2026, 1, 1)),
+      Deck(
+        id: 'd3',
+        name: '第三册',
+        createdAt: DateTime(2026, 1, 1),
+        suspended: true,
       ),
-    );
-    await tester.pumpAndSettle();
+    ];
+    final TestHarness harness = await boot(tester, cards: cards, decks: decks);
 
-    expect(find.text('标签筛选'), findsNothing);
-    expect(find.byType(FilterChip), findsNothing);
-    expect(find.text('清空筛选'), findsNothing);
-    expect((await harness.settings.load()).studyTagFilter, <String>['第四单元']);
-    // 出题范围还是整个卡组，说明行也换成 FSRS 那句
+    // 默认跟随当前卡组（这里是「全部词库」），挂起的第三册不算
     expect(choiceChip(tester, '全部（3）').selected, isTrue);
-    expect(find.textContaining('默认全出'), findsNothing);
-    expect(find.textContaining('FSRS-6 按最可能忘的顺序安排'), findsOneWidget);
+    expect(find.byKey(const Key('quiz-deck-d3')), findsNothing);
 
-    // 切回原有算法：筛选立刻又摆出来，也立刻生效
-    await harness.settings.save(
-      const AppSettings(studyTagFilter: <String>['第四单元']),
+    await tester.tap(find.byKey(const Key('quiz-deck-d1')));
+    await tester.pumpAndSettle();
+    expect(
+      (await harness.settings.load()).quizDeckIds,
+      <String>['d1'],
     );
+    expect(choiceChip(tester, '全部（1）').selected, isTrue);
+
+    // 多选：并集
+    await tester.tap(find.byKey(const Key('quiz-deck-d2')));
     await tester.pumpAndSettle();
-    expect(find.widgetWithText(FilterChip, '第四单元'), findsOneWidget);
+    expect(
+      (await harness.settings.load()).quizDeckIds,
+      <String>['d1', 'd2'],
+    );
     expect(choiceChip(tester, '全部（2）').selected, isTrue);
-  });
 
-  testWidgets('点开始测验：默认把整卡组的词都出了', (tester) async {
-    final TestHarness harness = await boot(tester);
-
-    await tester.tap(find.widgetWithText(FilledButton, '开始测验'));
+    // 回到跟随当前卡组
+    await tester.tap(find.text('回到跟随当前卡组'));
     await tester.pumpAndSettle();
-
-    expect(find.text('第 1 / 3 题'), findsOneWidget);
-
-    // 三题都答完，让倒计时停下来（留着定时器测试结束会报 pending timer）
-    for (int i = 0; i < 3; i++) {
-      final ProviderContainer container = ProviderScope.containerOf(
-        tester.element(find.byType(QuizPage)),
-      );
-      final String answer =
-          container.read(quizControllerProvider).current!.card.definition;
-      await tester.tap(find.text(answer));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 1200));
-      await tester.pumpAndSettle();
-    }
-
-    expect(find.text('正确率'), findsOneWidget);
-    expect(await harness.records.getAll(), hasLength(3));
+    expect((await harness.settings.load()).quizDeckIds, isEmpty);
+    expect(choiceChip(tester, '全部（3）').selected, isTrue);
   });
 
-  testWidgets('候选池：非 FSRS 按标签筛，FSRS 原样用整个卡组', (tester) async {
-    final TestHarness harness = await boot(tester);
+  testWidgets('FSRS 也按卡组与标签筛选：候选池跟着筛', (tester) async {
+    final TestHarness harness = await boot(
+      tester,
+      settings: const AppSettings(schedulerMode: SchedulerMode.fsrs),
+    );
     final ProviderContainer container = ProviderScope.containerOf(
       tester.element(find.byType(StudyPage)),
     );
@@ -188,29 +217,20 @@ void main() {
         .map((WordCard card) => card.word)
         .toList(growable: false);
 
-    // 没筛：整个卡组
     expect(poolWords(), <String>['abandon', 'meticulous', 'resilient']);
 
-    Future<void> saveAndSettle(AppSettings settings) async {
-      await harness.settings.save(settings);
-      await tester.pumpAndSettle();
-    }
-
-    await saveAndSettle(const AppSettings(studyTagFilter: <String>['第四单元']));
-    expect(poolWords(), <String>['abandon', 'meticulous']);
-
-    await saveAndSettle(
-      const AppSettings(studyTagFilter: <String>['第四单元', 'E2E']),
-    );
-    expect(container.read(studyPoolProvider), isEmpty);
-
-    // 切到 FSRS：标签筛选不参与，池子回到整个卡组
-    await saveAndSettle(
+    await harness.settings.save(
       const AppSettings(
         schedulerMode: SchedulerMode.fsrs,
         studyTagFilter: <String>['第四单元'],
+        tagMatchAsked: true,
       ),
     );
-    expect(poolWords(), <String>['abandon', 'meticulous', 'resilient']);
+    await tester.pumpAndSettle();
+    expect(poolWords(), <String>['abandon', 'meticulous']);
+
+    // 筛选控件在 FSRS 下照样摆着（以前是整块藏起来）
+    expect(find.widgetWithText(FilterChip, '第四单元'), findsOneWidget);
+    expect(find.textContaining('FSRS-6 按最可能忘的顺序安排'), findsOneWidget);
   });
 }

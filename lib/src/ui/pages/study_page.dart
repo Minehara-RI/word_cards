@@ -6,21 +6,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/models/answer_record.dart';
 import '../../domain/models/app_settings.dart';
+import '../../domain/models/deck.dart';
 import '../../domain/models/quiz_direction.dart';
 import '../../domain/models/word_card.dart';
 import '../../logic/fsrs.dart';
 import '../../logic/stats.dart';
 import '../../logic/stats_breakdown.dart';
+import '../../logic/study_pool.dart';
 import '../../state/providers.dart';
 import '../../state/quiz_controller.dart';
+import '../widgets/deck_tag_filter.dart';
 import '../widgets/number_field.dart';
 import '../widgets/section_card.dart';
 import 'quiz_page.dart';
 
-/// 「作答」页：看一眼状态、直接把本轮参数调好，然后开始限时测验。
+/// 「作答」页：看一眼状态、把这一轮的筛选与参数调好，然后开始限时测验。
 ///
-/// 每轮题数、每题限时、正误显示、复习算法都放在这里改（以前在设置页），
-/// 因为它们只影响这一次答题，改完应该马上能开始，不该来回跳页面。
+/// 每轮题数、每题限时、正误显示、复习算法、卡组与标签筛选都放在这里改：
+/// 它们只影响这一次答题，改完应该马上能开始，不该来回跳页面。
 class StudyPage extends ConsumerWidget {
   const StudyPage({super.key, required this.onGoToAdd});
 
@@ -28,34 +31,113 @@ class StudyPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final StudyStats stats =
-        ref.watch(statsProvider).value ?? StudyStats.empty;
     final AppSettings settings = ref.watch(currentSettingsProvider);
+    final OverviewSummary overview =
+        ref.watch(overviewSummaryProvider).value ?? OverviewSummary.empty;
+    final StudyStats stats = overview.stats;
+    final StudyScope scope = ref.watch(studyScopeProvider);
+    final List<Deck> decks = ref.watch(decksProvider).value ?? const <Deck>[];
+    final Set<String> suspended = ref.watch(suspendedDeckIdsProvider);
     final int total = ref.watch(allCardsProvider).value?.length ?? 0;
-    final int deckTotal = ref.watch(deckCardsProvider).length;
     final int dueCount = ref.watch(fsrsDueCountProvider);
-    final int poolTotal = ref.watch(studyPoolProvider).length;
-    final List<String> availableTags = ref.watch(deckTagsProvider);
-    // 当前卡组一张牌都筛不出来时提前拦住（FSRS 不看标签筛选，不算这种）。
-    final bool poolEmpty = !settings.usesFsrs && poolTotal == 0;
+    final int poolTotal = scope.cards.length;
+    final List<String> availableTags = scope.tags;
+    final String? currentDeckId = ref.watch(selectedDeckProvider);
+    final Deck? activeDeck = ref.watch(activeDeckProvider);
+    final int selectedSuspendedCount = settings.quizDeckIds
+        .where((String id) => suspended.contains(id))
+        .length;
+    final bool poolEmpty = poolTotal == 0;
     final ThemeData theme = Theme.of(context);
 
     Future<void> update(AppSettings next) =>
         ref.read(settingsRepositoryProvider).save(next);
+
+    Future<void> toggleDeck(Deck deck, bool on) async {
+      final List<String> next = List<String>.of(
+        ref.read(currentSettingsProvider).quizDeckIds,
+      );
+      if (on) {
+        if (!next.contains(deck.id)) next.add(deck.id);
+      } else {
+        next.remove(deck.id);
+      }
+      await update(ref.read(currentSettingsProvider).copyWith(quizDeckIds: next));
+    }
+
+    Future<void> toggleTag(String tag, bool on) async {
+      final List<String> next = List<String>.of(
+        ref.read(currentSettingsProvider).studyTagFilter,
+      );
+      TagMatchMode? asked;
+      if (on) {
+        if (!next.any((String item) => item.toLowerCase() == tag.toLowerCase())) {
+          next.add(tag);
+        }
+        // 第一次勾标签才问「并集还是交集」，问过就不再打扰。
+        asked = await askTagMatchModeIfNeeded(context, ref);
+      } else {
+        next.removeWhere(
+          (String item) => item.toLowerCase() == tag.toLowerCase(),
+        );
+      }
+      if (!context.mounted) return;
+      // 口径与筛选一次写进去：分两次写会读到旧设置。
+      final AppSettings latest = ref.read(currentSettingsProvider);
+      await update(latest.copyWith(
+        studyTagFilter: next,
+        tagMatchMode: asked ?? latest.tagMatchMode,
+        tagMatchAsked: latest.tagMatchAsked || asked != null,
+      ));
+    }
+
+    final List<Deck> selectableDecks = decks
+        .where((Deck deck) => !deck.suspended)
+        .toList(growable: false);
+    final String currentDeckName = currentDeckId == null
+        ? '全部词库'
+        : (activeDeck?.name ?? Deck.defaultDeckName);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: <Widget>[
         SectionCard(
           title: '学习概览',
+          subtitle: settings.overviewScope.description +
+              (suspended.isNotEmpty
+                  ? '（已挂起 ' + suspended.length.toString() + ' 个卡组）'
+                  : ''),
+          trailing: SegmentedButton<OverviewScope>(
+            segments: <ButtonSegment<OverviewScope>>[
+              for (final OverviewScope item in OverviewScope.values)
+                ButtonSegment<OverviewScope>(
+                  value: item,
+                  label: Text(item.label),
+                ),
+            ],
+            showSelectedIcon: false,
+            selected: <OverviewScope>{settings.overviewScope},
+            onSelectionChanged: (Set<OverviewScope> selection) =>
+                update(settings.copyWith(overviewScope: selection.first)),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
+              Text(
+                overview.scope == OverviewScope.currentDeck
+                    ? '范围：' + overview.label
+                    : '范围：' + overview.label + '（不含已挂起的卡组）',
+                style: theme.textTheme.labelMedium,
+              ),
+              const SizedBox(height: 10),
               Wrap(
                 spacing: 28,
                 runSpacing: 16,
                 children: <Widget>[
-                  StatTile(label: '卡片总数', value: total.toString()),
+                  StatTile(
+                    label: '卡片总数',
+                    value: overview.cards.length.toString(),
+                  ),
                   StatTile(
                     label: '已掌握',
                     value: stats.masteredCards.toString(),
@@ -90,6 +172,97 @@ class StudyPage extends ConsumerWidget {
           ),
         ),
         SectionCard(
+          title: '本轮筛选',
+          subtitle: '卡组多选取并集；标签按设置里的口径取并集或交集。'
+              '两套复习算法都按这个范围出题。',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Text('卡组', style: theme.textTheme.labelMedium),
+                  const SizedBox(width: 8),
+                  if (settings.quizDeckIds.isNotEmpty)
+                    TextButton(
+                      onPressed: () => update(
+                        ref
+                            .read(currentSettingsProvider)
+                            .copyWith(quizDeckIds: const <String>[]),
+                      ),
+                      child: const Text('回到跟随当前卡组'),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                settings.quizDeckIds.isEmpty
+                    ? '不勾卡组时跟随「当前卡组」：' + currentDeckName + '。'
+                        '已挂起的卡组不出现在这里。'
+                    : '已选 ' + settings.quizDeckIds.length.toString() +
+                        ' 个卡组，取并集。' +
+                        (selectedSuspendedCount > 0
+                            ? '其中 ' + selectedSuspendedCount.toString() +
+                                ' 个已挂起，已自动排除。'
+                            : ''),
+                style: theme.textTheme.bodySmall,
+              ),
+              const SizedBox(height: 8),
+              DeckFilterChips(
+                decks: selectableDecks,
+                selectedIds: settings.quizDeckIds,
+                onToggle: toggleDeck,
+                keyPrefix: 'quiz-deck',
+                emptyHint: '还没有卡组，全都在默认词库里。',
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: <Widget>[
+                  Text('标签', style: theme.textTheme.labelMedium),
+                  const SizedBox(width: 8),
+                  if (settings.studyTagFilter.isNotEmpty)
+                    TextButton(
+                      onPressed: () => update(
+                        ref
+                            .read(currentSettingsProvider)
+                            .copyWith(studyTagFilter: const <String>[]),
+                      ),
+                      child: const Text('清空筛选'),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '当前口径：' +
+                    settings.tagMatchMode.label +
+                    '（' +
+                    settings.tagMatchMode.description +
+                    '），在设置页可以改。一个都不选就是整个范围。',
+                style: theme.textTheme.bodySmall,
+              ),
+              const SizedBox(height: 8),
+              TagFilterChips(
+                tags: availableTags,
+                selected: settings.studyTagFilter,
+                onToggle: toggleTag,
+                emptyHint: '这个范围里还没有标签。去「加入」页给词打标签，这里就会出现可选。',
+              ),
+              if (settings.studyTagFilter.isNotEmpty) ...<Widget>[
+                const SizedBox(height: 8),
+                Text(
+                  '已选 ' +
+                      settings.studyTagFilter.join(' + ') +
+                      '：' +
+                      poolTotal.toString() +
+                      ' / ' +
+                      scope.deckCards.length.toString() +
+                      ' 个词',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+            ],
+          ),
+        ),
+        SectionCard(
           title: '本轮设置',
           subtitle: '每道题都有倒计时，到点自动判超时并进入下一题。',
           child: Column(
@@ -99,6 +272,8 @@ class StudyPage extends ConsumerWidget {
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: <Widget>[
                   for (final int count in <int>[5, 10, 20])
                     ChoiceChip(
@@ -117,33 +292,31 @@ class StudyPage extends ConsumerWidget {
                       ),
                     ),
                   ),
+                  NumberField(
+                    fieldKey: const Key('quiz-count-field'),
+                    label: '自定义题数',
+                    helper: '0 = 全部，最多 999',
+                    width: 180,
+                    value: settings.quizQuestionCount,
+                    min: AppSettings.allQuestions,
+                    max: 999,
+                    onCommit: (int count) =>
+                        update(settings.copyWith(quizQuestionCount: count)),
+                  ),
                 ],
               ),
               const SizedBox(height: 6),
               Text(
                 _poolSummary(
                   settings: settings,
-                  deckTotal: deckTotal,
-                  poolTotal: poolTotal,
+                  scope: scope,
                   dueCount: dueCount,
+                  currentDeckName: currentDeckName,
                 ),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: poolEmpty ? theme.colorScheme.error : null,
                 ),
               ),
-              // 标签筛选只在「原有算法」下有意义：开着 FSRS-6 就整块藏起来，
-              // 免得摆一排点不动的控件。选择照旧存在设置里，切回来立刻生效。
-              if (!settings.usesFsrs) ...<Widget>[
-                const SizedBox(height: 16),
-                _TagFilterPanel(
-                  settings: settings,
-                  tags: availableTags,
-                  deckTotal: deckTotal,
-                  poolTotal: poolTotal,
-                  onChanged: (List<String> next) =>
-                      update(settings.copyWith(studyTagFilter: next)),
-                ),
-              ],
               const SizedBox(height: 16),
               Text('出题方向', style: theme.textTheme.labelMedium),
               const SizedBox(height: 4),
@@ -236,7 +409,7 @@ class StudyPage extends ConsumerWidget {
                 const SizedBox(height: 14),
                 _FsrsPanel(
                   settings: settings,
-                  deckTotal: deckTotal,
+                  deckTotal: scope.deckCards.length,
                   dueCount: dueCount,
                   onRetention: (double value) => update(
                     settings.copyWith(fsrsDesiredRetention: value),
@@ -319,11 +492,11 @@ class StudyPage extends ConsumerWidget {
     final AppSettings settings = ref.read(currentSettingsProvider);
 
     if (settings.usesFsrs) {
-      // FSRS 模式：按「最可能忘」的顺序出题，不再随机打乱。
+      // FSRS 模式：候选池已经按卡组/标签筛过，这里只按「最可能忘」排序。
       final List<WordCard> ordered =
           ref.read(fsrsQueueProvider).map((FsrsQueueItem item) => item.card).toList();
       if (ordered.isEmpty) {
-        _toast(context, '当前卡组没有可复习的词。');
+        _toast(context, '本轮筛选范围里没有可复习的词。');
         return;
       }
       await ref.read(quizControllerProvider.notifier).startWithCards(
@@ -332,14 +505,12 @@ class StudyPage extends ConsumerWidget {
             shuffle: false,
           );
     } else {
-      // 原有算法：默认出当前卡组（有筛选就先按标签筛）的全部词。
-      // 「题目数量」只负责截断，选「全部」时出的是整份词表。
       final List<WordCard> pool = ref.read(studyPoolProvider);
       if (pool.isEmpty) {
         _toast(
           context,
           settings.studyTagFilter.isEmpty
-              ? '当前卡组没有可用的词。'
+              ? '本轮范围里没有可用的词。'
               : '当前标签筛选下没有词，换一组标签或者清空筛选。',
         );
         return;
@@ -388,7 +559,7 @@ class StudyPage extends ConsumerWidget {
 
   /// 从答题记录里挑出正确率最低的词重练（原有算法那条路）。
   static Future<void> _startWeakest(BuildContext context, WidgetRef ref) async {
-    // 用同一份候选池：标签筛选对「只练做错的词」也生效。
+    // 用同一份候选池：卡组与标签筛选对「只练做错的词」也生效。
     final List<WordCard> cards = ref.read(studyPoolProvider);
     final List<AnswerRecord> records =
         await ref.read(answerRecordRepositoryProvider).getAll();
@@ -430,117 +601,45 @@ class StudyPage extends ConsumerWidget {
 /// 「题目数量」下面那行说明：这一轮到底会考哪些词、考多少个。
 String _poolSummary({
   required AppSettings settings,
-  required int deckTotal,
-  required int poolTotal,
+  required StudyScope scope,
   required int dueCount,
+  required String currentDeckName,
 }) {
+  if (scope.selectedDeckSuspended) {
+    return '当前卡组「' +
+        currentDeckName +
+        '」已被挂起：它不会出现在作答范围里。'
+            '要去设置页点「恢复」，或者勾选别的卡组。';
+  }
+  final String range = scope.followedCurrentDeck
+      ? '当前卡组「' + currentDeckName + '」'
+      : scope.deckIds.length.toString() + ' 个卡组';
+
   if (settings.usesFsrs) {
-    return '当前卡组 ' +
-        deckTotal.toString() +
-        ' 个词，今天到期 ' +
+    return range +
+        '共 ' +
+        scope.deckCards.length.toString() +
+        ' 个词，筛出 ' +
+        scope.cards.length.toString() +
+        ' 个，今天到期 ' +
         dueCount.toString() +
         ' 个；FSRS-6 按最可能忘的顺序安排。';
   }
-  if (settings.studyTagFilter.isEmpty) {
-    return '当前卡组 ' +
-        deckTotal.toString() +
-        ' 个词，默认全出；想少做可以选上面的题数，想缩小范围可以选标签。';
-  }
-  if (poolTotal == 0) {
+  if (scope.cards.isEmpty) {
     return '按标签筛完一个词都不剩了，换个标签或者点「清空筛选」。';
   }
-  return '当前卡组 ' +
-      deckTotal.toString() +
+  if (settings.studyTagFilter.isEmpty) {
+    return range +
+        '共 ' +
+        scope.cards.length.toString() +
+        ' 个词，默认全出；想少做可以选题数，想缩小范围可以勾标签。';
+  }
+  return range +
+      '共 ' +
+      scope.deckCards.length.toString() +
       ' 个词，按标签筛出 ' +
-      poolTotal.toString() +
+      scope.cards.length.toString() +
       ' 个，默认全出。';
-}
-
-/// 「本轮考哪些词」的标签筛选：多选，取「与」。
-///
-/// 只在「原有算法」下显示与生效。开着 FSRS-6 时整块不画
-/// （复习队列按整个卡组排），选择照旧留在设置里，切回原有算法立刻生效。
-class _TagFilterPanel extends StatelessWidget {
-  const _TagFilterPanel({
-    required this.settings,
-    required this.tags,
-    required this.deckTotal,
-    required this.poolTotal,
-    required this.onChanged,
-  });
-
-  final AppSettings settings;
-  final List<String> tags;
-  final int deckTotal;
-  final int poolTotal;
-  final ValueChanged<List<String>> onChanged;
-
-  void _toggle(String tag) {
-    final List<String> next = List<String>.of(settings.studyTagFilter);
-    if (!next.remove(tag)) next.add(tag);
-    onChanged(next);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final List<String> selected = settings.studyTagFilter;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Row(
-          children: <Widget>[
-            Text('标签筛选', style: theme.textTheme.labelMedium),
-            const SizedBox(width: 8),
-            if (selected.isNotEmpty)
-              TextButton(
-                onPressed: () => onChanged(const <String>[]),
-                child: const Text('清空筛选'),
-              ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          '只在原有算法下生效。选多个标签时，词要同时带上这些标签才会入选；'
-          '一个都不选就是整个卡组。',
-          style: theme.textTheme.bodySmall,
-        ),
-        const SizedBox(height: 8),
-        if (tags.isEmpty)
-          Text(
-            '当前卡组还没有标签。去「加入」页给词打标签，这里就会出现可选。',
-            style: theme.textTheme.bodySmall,
-          )
-        else
-          Wrap(
-            spacing: 8,
-            runSpacing: 4,
-            children: <Widget>[
-              for (final String tag in tags)
-                FilterChip(
-                  label: Text(tag),
-                  selected: selected.contains(tag),
-                  onSelected: (_) => _toggle(tag),
-                ),
-            ],
-          ),
-        if (selected.isNotEmpty) ...<Widget>[
-          const SizedBox(height: 8),
-          Text(
-            '已选 ' +
-                selected.join(' + ') +
-                '：' +
-                poolTotal.toString() +
-                ' / ' +
-                deckTotal.toString() +
-                ' 个词',
-            style: theme.textTheme.bodySmall,
-          ),
-        ],
-      ],
-    );
-  }
 }
 
 /// FSRS 打开时多出来的那一段：目标保留率 + 今天该复习多少。
@@ -581,7 +680,7 @@ class _FsrsPanel extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '当前卡组 ' +
+                  '本轮范围 ' +
                       deckTotal.toString() +
                       ' 个词，今天该复习 ' +
                       dueCount.toString() +

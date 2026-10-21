@@ -111,7 +111,12 @@ Future<String?> showDeckPicker(BuildContext context, WidgetRef ref) async {
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text(deck.name, overflow: TextOverflow.ellipsis),
+                  child: Text(
+                    // 挂起的卡组在「加入」页仍然可以选（新词还是要能加进去），
+                    // 但标出来，免得用户忘了它在作答页消失是因为挂起了。
+                    deck.suspended ? deck.name + '（已挂起）' : deck.name,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),

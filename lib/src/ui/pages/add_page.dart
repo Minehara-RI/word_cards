@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/ids.dart';
+import '../../data/ai/api_client.dart';
+import '../../data/ai/card_completion.dart';
 import '../../domain/models/app_settings.dart';
 import '../../domain/models/card_language.dart';
 import '../../domain/models/card_source.dart';
@@ -39,7 +41,12 @@ class _AddPageState extends ConsumerState<AddPage> {
 
   // 语言选择跟着设置走：选完就记住，加入页 / 导入页 / 设置页看到的是同一个。
   bool _saving = false;
+  bool _completing = false;
   String? _error;
+
+  /// 必填项齐了才允许用 AI 补全：没有单词和释义，模型也无从补起。
+  bool get _canComplete =>
+      _word.text.trim().isNotEmpty && _definition.text.trim().isNotEmpty;
 
   @override
   void dispose() {
@@ -149,6 +156,115 @@ class _AddPageState extends ConsumerState<AddPage> {
     return result;
   }
 
+  /// AI 补全：把单词 + 释义发给模型，只补空着的非必填项。
+  ///
+  /// 用户自己填过的字段一律不动 —— 「补全」不是「覆盖」。
+  Future<void> _aiComplete(CardLanguage language) async {
+    if (!_canComplete) {
+      _toast('先填好单词和释义，再用 AI 补全。这两项是必填的。');
+      return;
+    }
+    final AppSettings settings = ref.read(currentSettingsProvider);
+    if (!settings.hasApiCredentials) {
+      _toast('AI 补全要先在设置页配好 API（地址、模型、密钥）。'
+          '这个功能只走 API，不提供复制 Prompt 到网页的做法。');
+      return;
+    }
+
+    setState(() {
+      _completing = true;
+      _error = null;
+    });
+
+    try {
+      final outcome = await ref.read(cardCompletionServiceProvider).complete(
+            word: _word.text.trim(),
+            definition: _definition.text.trim(),
+            language: language,
+            settings: settings,
+            existingPhonetic: _blankToNull(_phonetic.text),
+            existingPartOfSpeech: _blankToNull(_partOfSpeech.text),
+            existingExample: _blankToNull(_example.text),
+            existingNote: _blankToNull(_note.text),
+            existingDistractors: parseDistractors(_distractors.text),
+          );
+      if (!mounted) return;
+
+      // 花了 token 就记一笔，不管解析成没成（缓存命中不算）。
+      if (!outcome.fromCache &&
+          (outcome.promptTokens > 0 || outcome.completionTokens > 0)) {
+        await ref.read(settingsRepositoryProvider).save(
+              ref.read(currentSettingsProvider).addApiUsage(
+                    calls: 1,
+                    promptTokens: outcome.promptTokens,
+                    completionTokens: outcome.completionTokens,
+                  ),
+            );
+      }
+
+      final AiApiFailure? failure = outcome.failure;
+      if (failure != null) {
+        _toast(failure.hint == null
+            ? failure.message
+            : failure.message + '：' + failure.hint!);
+        return;
+      }
+
+      final CardCompletion completion = outcome.completion!;
+      final List<String> filled = <String>[];
+      if (completion.phonetic != null && _phonetic.text.trim().isEmpty) {
+        _phonetic.text = completion.phonetic!;
+        filled.add('音标');
+      }
+      if (completion.partOfSpeech != null &&
+          _partOfSpeech.text.trim().isEmpty) {
+        _partOfSpeech.text = completion.partOfSpeech!;
+        filled.add('词性');
+      }
+      if (completion.example != null && _example.text.trim().isEmpty) {
+        _example.text = completion.example!;
+        filled.add('例句');
+      }
+      if (completion.note != null && _note.text.trim().isEmpty) {
+        _note.text = completion.note!;
+        filled.add('备注');
+      }
+      final List<String> existing = parseDistractors(_distractors.text);
+      if (completion.distractors.isNotEmpty &&
+          existing.length < WordCard.targetDistractorCount) {
+        final List<String> merged = List<String>.of(existing);
+        for (final String item in completion.distractors) {
+          if (merged.length >= WordCard.targetDistractorCount) break;
+          if (merged.any(
+            (String have) => have.toLowerCase() == item.toLowerCase(),
+          )) {
+            continue;
+          }
+          if (item.trim() == _definition.text.trim()) continue;
+          merged.add(item);
+        }
+        if (merged.length != existing.length) {
+          _distractors.text = merged.join('\n');
+          filled.add('干扰项');
+        }
+      }
+      if (!mounted) return;
+      setState(() {});
+      _toast(filled.isEmpty
+          ? 'AI 没有带来新的补充（已经填过的一律保留）。'
+          : 'AI 补全完成：' + filled.join('、'));
+    } finally {
+      if (mounted) setState(() => _completing = false);
+    }
+  }
+
+  void _toast(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
   void _clearForm() {
     _word.clear();
     _definition.clear();
@@ -196,8 +312,18 @@ class _AddPageState extends ConsumerState<AddPage> {
                 spacing: 12,
                 runSpacing: 12,
                 children: <Widget>[
-                  _Field(controller: _word, label: '单词 *', width: 240),
-                  _Field(controller: _definition, label: '释义 *', width: 340),
+                  _Field(
+                    controller: _word,
+                    label: '单词 *',
+                    width: 240,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  _Field(
+                    controller: _definition,
+                    label: '释义 *',
+                    width: 340,
+                    onChanged: (_) => setState(() {}),
+                  ),
                   _Field(controller: _phonetic, label: '音标', width: 200),
                   _Field(controller: _partOfSpeech, label: '词性', width: 140),
                   _Field(controller: _example, label: '例句', width: 340),
@@ -253,8 +379,31 @@ class _AddPageState extends ConsumerState<AddPage> {
                 ),
               ],
               const SizedBox(height: 16),
-              Row(
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: <Widget>[
+                  OutlinedButton.icon(
+                    key: const Key('add-ai-complete'),
+                    // 必填项没填时按钮是灰的，但仍然可点：点一下要告诉用户差什么，
+                    // 而不是按下去毫无反应。
+                    onPressed: _completing ? null : () => _aiComplete(language),
+                    style: _canComplete
+                        ? null
+                        : OutlinedButton.styleFrom(
+                            foregroundColor: theme.disabledColor,
+                            side: BorderSide(color: theme.disabledColor),
+                          ),
+                    icon: _completing
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.auto_awesome_outlined),
+                    label: Text(_completing ? '正在补全…' : 'AI 补全'),
+                  ),
                   FilledButton.icon(
                     onPressed: _saving
                         ? null
@@ -272,16 +421,19 @@ class _AddPageState extends ConsumerState<AddPage> {
                           : '加入卡片',
                     ),
                   ),
-                  if (_error != null) ...<Widget>[
-                    const SizedBox(width: 16),
-                    Flexible(
-                      child: Text(
-                        _error!,
-                        style: TextStyle(color: theme.colorScheme.error),
-                      ),
+                  if (_error != null)
+                    Text(
+                      _error!,
+                      style: TextStyle(color: theme.colorScheme.error),
                     ),
-                  ],
                 ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'AI 补全：把必填的单词和释义发给设置里配好的模型，'
+                '自动补齐音标、词性、例句、备注和干扰项（优先给容易混淆的）。'
+                '只走 API，不提供复制 Prompt 到网页的做法；已经填过的格子不会被覆盖。',
+                style: theme.textTheme.bodySmall,
               ),
             ],
           ),
@@ -358,6 +510,7 @@ class _Field extends StatelessWidget {
     required this.width,
     this.maxLines = 1,
     this.fieldKey,
+    this.onChanged,
   });
 
   final TextEditingController controller;
@@ -365,6 +518,7 @@ class _Field extends StatelessWidget {
   final double width;
   final int maxLines;
   final Key? fieldKey;
+  final ValueChanged<String>? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -374,6 +528,7 @@ class _Field extends StatelessWidget {
         key: fieldKey,
         controller: controller,
         maxLines: maxLines,
+        onChanged: onChanged,
         decoration: InputDecoration(labelText: label, isDense: true),
       ),
     );

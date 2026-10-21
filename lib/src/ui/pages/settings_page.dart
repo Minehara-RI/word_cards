@@ -141,6 +141,8 @@ class SettingsPage extends ConsumerWidget {
                     Text('管理卡组', style: theme.textTheme.labelLarge),
                     const SizedBox(height: 2),
                     Text(
+                      '「挂起」= 暂时不学它：作答页选不到这个卡组，'
+                      '学习概览也不算它的词；演示照样能放，再点「恢复」就回来了。'
                       '「重置」只清学习进度（复习次数、掌握度、答题记录），词都留着；'
                       '「删除」会把卡组和里面的词一起删掉，不能恢复。'
                       '默认词库可以重置，不能删除。',
@@ -148,6 +150,45 @@ class SettingsPage extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     const _DeckManager(),
+                  ],
+                ),
+              ),
+              _Section(
+                title: '筛选',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text('多个标签怎么组合', style: theme.textTheme.labelLarge),
+                    const SizedBox(height: 4),
+                    Text(
+                      '「作答」页与「演示」页的标签筛选共用这一档；'
+                      '第一次勾标签时也会问一次，选过就不再问。',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 10),
+                    SegmentedButton<TagMatchMode>(
+                      segments: TagMatchMode.values
+                          .map(
+                            (TagMatchMode mode) => ButtonSegment<TagMatchMode>(
+                              value: mode,
+                              label: Text(mode.label),
+                            ),
+                          )
+                          .toList(growable: false),
+                      selected: <TagMatchMode>{settings.tagMatchMode},
+                      onSelectionChanged: (Set<TagMatchMode> selection) => update(
+                        settings.copyWith(
+                          tagMatchMode: selection.first,
+                          tagMatchAsked: true,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      settings.tagMatchMode.description +
+                          '。卡组筛选永远是并集（勾几个就考几个）。',
+                      style: theme.textTheme.bodySmall,
+                    ),
                   ],
                 ),
               ),
@@ -330,22 +371,48 @@ class _DeckManager extends ConsumerWidget {
     final int count =
         cards.where((WordCard card) => card.deckId == deck.id).length;
     final bool isDefault = deck.id == Deck.defaultDeckId;
+    final ButtonStyle compact = TextButton.styleFrom(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      minimumSize: const Size(0, 36),
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
 
     return ListTile(
       key: Key('deck-row-' + deck.id),
       contentPadding: EdgeInsets.zero,
       dense: true,
       leading: Icon(
-        selected == deck.id ? Icons.radio_button_checked : Icons.style_outlined,
+        deck.suspended
+            ? Icons.pause_circle_outline
+            : (selected == deck.id
+                ? Icons.radio_button_checked
+                : Icons.style_outlined),
         size: 18,
+        color: deck.suspended ? theme.colorScheme.outline : null,
       ),
-      title: Text(deck.name, overflow: TextOverflow.ellipsis),
-      subtitle: Text(count == 0 ? '空卡组' : count.toString() + ' 个词'),
+      title: Text(
+        deck.name,
+        overflow: TextOverflow.ellipsis,
+        style: deck.suspended
+            ? TextStyle(color: theme.colorScheme.outline)
+            : null,
+      ),
+      subtitle: Text(
+        (count == 0 ? '空卡组' : count.toString() + ' 个词') +
+            (deck.suspended ? ' · 已挂起，不作答' : ''),
+      ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           TextButton(
+            key: Key('deck-suspend-' + deck.id),
+            style: compact,
+            onPressed: () => _toggleSuspended(context, ref, deck),
+            child: Text(deck.suspended ? '恢复' : '挂起'),
+          ),
+          TextButton(
             key: Key('deck-reset-' + deck.id),
+            style: compact,
             onPressed:
                 count == 0 ? null : () => _resetDeck(context, ref, deck, count),
             child: const Text('重置'),
@@ -355,11 +422,39 @@ class _DeckManager extends ConsumerWidget {
               key: Key('deck-delete-' + deck.id),
               style: TextButton.styleFrom(
                 foregroundColor: theme.colorScheme.error,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                minimumSize: const Size(0, 36),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
               onPressed: () => _deleteDeck(context, ref, deck, count),
               child: const Text('删除'),
             ),
         ],
+      ),
+    );
+  }
+
+  /// 挂起 / 恢复：只改一个标记，词、进度、设置全都不动。
+  ///
+  /// 挂起当前卡组时**不改当前卡组**：用户可能只是暂时搁置，
+  /// 点一下恢复就回到原来的状态，比偷偷把当前卡组切走更可预期。
+  Future<void> _toggleSuspended(
+    BuildContext context,
+    WidgetRef ref,
+    Deck deck,
+  ) async {
+    final bool next = !deck.suspended;
+    await ref.read(deckRepositoryProvider).upsert(
+          deck.copyWith(suspended: next),
+        );
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          next
+              ? '已挂起「' + deck.name + '」：作答与学习概览都不再算它'
+              : '已恢复「' + deck.name + '」',
+        ),
       ),
     );
   }

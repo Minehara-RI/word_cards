@@ -22,7 +22,7 @@ void main() {
       cards: cards,
       source: ProjectionSource.currentDeck,
       currentDeckId: 'd2',
-      chosenDeckId: 'd1',
+      chosenDeckIds: const <String>['d1'],
       tags: const <String>[],
     );
     expect(scope.deckId, 'd2');
@@ -35,7 +35,7 @@ void main() {
       cards: cards,
       source: ProjectionSource.currentDeck,
       currentDeckId: null,
-      chosenDeckId: 'd1',
+      chosenDeckIds: const <String>['d1'],
       tags: const <String>[],
     );
     expect(scope.deckId, isNull);
@@ -47,7 +47,7 @@ void main() {
       cards: cards,
       source: ProjectionSource.all,
       currentDeckId: 'd1',
-      chosenDeckId: 'd2',
+      chosenDeckIds: const <String>['d2'],
       tags: const <String>[],
     );
     expect(scope.deckId, isNull);
@@ -59,7 +59,7 @@ void main() {
       cards: cards,
       source: ProjectionSource.deck,
       currentDeckId: 'd2',
-      chosenDeckId: 'd1',
+      chosenDeckIds: const <String>['d1'],
       tags: const <String>[],
     );
     expect(scope.deckId, 'd1');
@@ -71,7 +71,7 @@ void main() {
       cards: cards,
       source: ProjectionSource.deck,
       currentDeckId: 'd2',
-      chosenDeckId: null,
+      chosenDeckIds: const <String>[],
       tags: const <String>[],
     );
     expect(scope.deckId, 'd2');
@@ -83,7 +83,7 @@ void main() {
       cards: cards,
       source: ProjectionSource.all,
       currentDeckId: null,
-      chosenDeckId: null,
+      chosenDeckIds: const <String>[],
       tags: <String>['考研', '新词'],
     );
     expect(ids(scope), <String>['b1']);
@@ -94,7 +94,7 @@ void main() {
       cards: cards,
       source: ProjectionSource.deck,
       currentDeckId: null,
-      chosenDeckId: 'd2',
+      chosenDeckIds: const <String>['d2'],
       tags: <String>['考研'],
     );
     // deckTags 按出现次数排，同次数按名称排（「新」在「考」前面）。
@@ -107,22 +107,44 @@ void main() {
       cards: cards,
       source: ProjectionSource.deck,
       currentDeckId: null,
-      chosenDeckId: 'd1',
+      chosenDeckIds: const <String>['d1'],
       tags: <String>['新词'],
     );
     expect(scope.cards, isEmpty);
     expect(scope.deckCards, hasLength(2));
   });
 
+  test('指定多个卡组：取并集', () {
+    final ProjectionScope scope = resolveProjectionScope(
+      cards: cards,
+      source: ProjectionSource.deck,
+      currentDeckId: null,
+      chosenDeckIds: const <String>['d1', 'd2'],
+      tags: const <String>[],
+    );
+    expect(scope.deckIds, <String>['d1', 'd2']);
+    expect(scope.cards, hasLength(4));
+    // 多个卡组时没有「单个卡组」可写进答案文件抬头。
+    expect(scope.deckId, isNull);
+  });
+
+  test('老设置里的单个 projection_deck_id 会读成一个元素的列表', () {
+    final AppSettings back = AppSettings.fromMap(<String, Object?>{
+      'projection_source': 'deck',
+      'projection_deck_id': 'd2',
+    });
+    expect(back.projectionDeckIds, <String>['d2']);
+  });
+
   test('设置里的来源与标签会原样存下来', () {
     const AppSettings settings = AppSettings(
       projectionSource: ProjectionSource.deck,
-      projectionDeckId: 'd2',
+      projectionDeckIds: <String>['d2', 'd3'],
       projectionTagFilter: <String>['考研', '新词'],
     );
     final AppSettings back = AppSettings.fromMap(settings.toMap());
     expect(back.projectionSource, ProjectionSource.deck);
-    expect(back.projectionDeckId, 'd2');
+    expect(back.projectionDeckIds, <String>['d2', 'd3']);
     expect(back.projectionTagFilter, <String>['考研', '新词']);
   });
 
@@ -131,7 +153,7 @@ void main() {
       'home_tab': 'study',
     });
     expect(back.projectionSource, ProjectionSource.currentDeck);
-    expect(back.projectionDeckId, isNull);
+    expect(back.projectionDeckIds, isEmpty);
     expect(back.projectionTagFilter, isEmpty);
   });
 }
