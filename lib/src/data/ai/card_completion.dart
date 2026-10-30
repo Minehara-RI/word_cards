@@ -234,6 +234,7 @@ class CardCompletionService {
       word: w,
       definition: d,
       language: language,
+      accent: settings.phoneticAccent,
       existingPhonetic: existingPhonetic,
       existingPartOfSpeech: existingPartOfSpeech,
       existingExample: existingExample,

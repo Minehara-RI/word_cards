@@ -113,7 +113,11 @@ class GenerationService {
     required AppSettings settings,
   }) async {
     final String raw = words.trim();
-    final String prompt = template.build(words, language: language);
+    final String prompt = template.build(
+      words,
+      language: language,
+      accent: settings.phoneticAccent,
+    );
     final String cacheKey = cacheKeyFor(
       baseUrl: settings.apiBaseUrl ?? '',
       model: settings.apiModel ?? '',

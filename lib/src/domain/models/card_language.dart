@@ -49,8 +49,13 @@ enum CardLanguage {
       };
 
   /// 「音标」这一栏该怎么填——不同语言的注音方式差别很大。
-  String get phoneticHint => switch (this) {
-        CardLanguage.english => '美式音标，用斜杠包起来，例如 /əˈbændən/',
+  ///
+  /// 只有英语要再分英式 / 美式（[accent]）：同一本词典里两种标法都在，
+  /// 混着写会让一套卡片的音标前后不一致。法语、俄语用国际音标，日语用假名，
+  /// 都不存在口音之别，这一档对它们没有影响。
+  String phoneticHint({PhoneticAccent accent = PhoneticAccent.american}) =>
+      switch (this) {
+        CardLanguage.english => accent.promptHint,
         CardLanguage.french => '国际音标，用方括号包起来，例如 [a.bɑ̃.dɔ.ne]',
         CardLanguage.japanese => '平假名读音，放在【】里，例如【すいえい】',
         CardLanguage.korean => '罗马字转写，放在方括号里，例如 [sagwa]',
@@ -83,4 +88,62 @@ enum CardLanguage {
   /// 这个标签是不是语言标签（语言标签不算用户自定义标签）。
   static bool isLanguageTag(String tag) =>
       tag.trim().toLowerCase().startsWith(tagPrefix);
+}
+
+/// 英语音标用英式还是美式。
+///
+/// 两种体系对同一个词的标法确实不同（water：英 /ˈwɔːtə/、美 /ˈwɔːtɚ/），
+/// 一套词卡里混着写会让人以为某个词有两种读法。这个选择只影响
+/// **让 AI 生成音标时怎么提要求**：已经进库的音标不会被改写
+/// （那是用户自己的卡片，静默改数据比标法不统一更糟）。
+enum PhoneticAccent {
+  british(
+    'british',
+    '英式',
+    'DJ 音标',
+    '/ˈwɔːtə/',
+    '英式音标，用斜杠包起来，例如 /ˈwɔːtə/；按英式发音写，不要写成美式的卷舌音',
+  ),
+  american(
+    'american',
+    '美式',
+    'KK 音标',
+    '/ˈwɔːtɚ/',
+    '美式音标，用斜杠包起来，例如 /ˈwɔːtɚ/；按美式发音写，注意卷舌音',
+  );
+
+  const PhoneticAccent(
+    this.id,
+    this.label,
+    this.system,
+    this.example,
+    this.promptHint,
+  );
+
+  /// 持久化用的稳定标识。
+  final String id;
+
+  /// 界面上的简称。
+  final String label;
+
+  /// 音标体系的名字，界面上跟在简称后面。
+  final String system;
+
+  /// 一个两种标法明显不同的例词（water），设置页拿它说明差别。
+  final String example;
+
+  /// 写进 Prompt 的完整说法（拼在「phonetic 给……」后面）。
+  final String promptHint;
+
+  /// 界面上「英式 · DJ 音标」这样的展示名。
+  String get displayName => label + ' · ' + system;
+
+  static PhoneticAccent fromId(Object? value) {
+    if (value is String) {
+      for (final accent in PhoneticAccent.values) {
+        if (accent.id == value || accent.name == value) return accent;
+      }
+    }
+    return PhoneticAccent.american;
+  }
 }

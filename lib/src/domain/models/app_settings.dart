@@ -268,6 +268,7 @@ class AppSettings {
     this.fontScale = 1.0,
     this.activeDeckId,
     this.language = CardLanguage.english,
+    this.phoneticAccent = PhoneticAccent.american,
     this.schedulerMode = SchedulerMode.legacy,
     this.fsrsDesiredRetention = defaultRetention,
     this.promptTemplateId,
@@ -431,6 +432,12 @@ class AppSettings {
   /// 新词默认用哪种语言。
   final CardLanguage language;
 
+  /// 英语音标用英式还是美式。
+  ///
+  /// 只影响「要 AI 生成 / 补全音标」时的 Prompt；已进库的音标一个字节都不动。
+  /// 对其它语言无效：它们的注音方式与口音无关。
+  final PhoneticAccent phoneticAccent;
+
   // ---- 复习算法 ----
 
   /// 用原来那套算法，还是用 FSRS-6。
@@ -558,6 +565,7 @@ class AppSettings {
     String? activeDeckId,
     bool clearActiveDeckId = false,
     CardLanguage? language,
+    PhoneticAccent? phoneticAccent,
     SchedulerMode? schedulerMode,
     double? fsrsDesiredRetention,
     String? promptTemplateId,
@@ -615,6 +623,7 @@ class AppSettings {
       activeDeckId:
           clearActiveDeckId ? null : (activeDeckId ?? this.activeDeckId),
       language: language ?? this.language,
+      phoneticAccent: phoneticAccent ?? this.phoneticAccent,
       schedulerMode: schedulerMode ?? this.schedulerMode,
       fsrsDesiredRetention:
           fsrsDesiredRetention ?? this.fsrsDesiredRetention,
@@ -663,6 +672,7 @@ class AppSettings {
         'font_scale': fontScale,
         'active_deck_id': activeDeckId,
         'language': language.id,
+        'phonetic_accent': phoneticAccent.id,
         'scheduler_mode': schedulerMode.id,
         'fsrs_desired_retention': fsrsDesiredRetention,
         'prompt_template_id': promptTemplateId,
@@ -743,6 +753,7 @@ class AppSettings {
                 ? null
                 : (map['active_deck_id'] as String).trim(),
         language: CardLanguage.fromId(map['language']),
+        phoneticAccent: PhoneticAccent.fromId(map['phonetic_accent']),
         schedulerMode: SchedulerMode.fromId(map['scheduler_mode']),
         promptTemplateId:
             (map['prompt_template_id'] as String?)?.trim().isEmpty ?? true

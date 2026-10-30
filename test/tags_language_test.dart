@@ -40,8 +40,8 @@ void main() {
       expect(CardLanguage.fromId('ko'), CardLanguage.korean);
       expect(CardLanguage.fromId('unknown'), CardLanguage.english);
       expect(CardLanguage.korean.exampleLanguage, '韩文');
-      expect(CardLanguage.japanese.phoneticHint, contains('平假名'));
-      expect(CardLanguage.russian.phoneticHint, contains('国际音标'));
+      expect(CardLanguage.japanese.phoneticHint(), contains('平假名'));
+      expect(CardLanguage.russian.phoneticHint(), contains('国际音标'));
     });
 
     test('从标签串里读得出语言', () {

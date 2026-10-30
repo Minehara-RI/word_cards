@@ -220,6 +220,39 @@ class SettingsPage extends ConsumerWidget {
                           )
                           .toList(growable: false),
                     ),
+                    const SizedBox(height: 16),
+                    Text('英语音标用哪种', style: theme.textTheme.labelLarge),
+                    const SizedBox(height: 4),
+                    Text(
+                      '只影响 AI 生成卡片和「AI 补全」时索要的音标：'
+                      '同一套词卡里标法要一致。已经进库的音标不会被改写；'
+                      '其它语言的注音方式与口音无关。',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 8),
+                    SegmentedButton<PhoneticAccent>(
+                      key: const Key('phonetic-accent'),
+                      segments: PhoneticAccent.values
+                          .map(
+                            (PhoneticAccent accent) =>
+                                ButtonSegment<PhoneticAccent>(
+                              value: accent,
+                              label: Text(accent.label),
+                            ),
+                          )
+                          .toList(growable: false),
+                      selected: <PhoneticAccent>{settings.phoneticAccent},
+                      onSelectionChanged: (Set<PhoneticAccent> selection) =>
+                          update(
+                        settings.copyWith(phoneticAccent: selection.first),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${settings.phoneticAccent.system}：'
+                      '例如 water 记作 ${settings.phoneticAccent.example}。',
+                      style: theme.textTheme.bodySmall,
+                    ),
                     const SizedBox(height: 12),
                     Text(
                       '界面统一使用无衬线字体，日文假名、韩文谚文、俄文西里尔'

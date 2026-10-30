@@ -53,6 +53,13 @@ class _ImportPageState extends ConsumerState<ImportPage> {
   CardLanguage _resolvedLanguage() =>
       ref.read(currentSettingsProvider).language;
 
+  /// 英语音标用英式还是美式（同样跟着设置走）。
+  ///
+  /// 预览和「复制 Prompt」都带上它：复制出去的那份必须和 API 直连发出去的
+  /// 一字不差，否则用户按复制版生成的结果会和自己选的口音对不上。
+  PhoneticAccent _accent() =>
+      ref.read(currentSettingsProvider).phoneticAccent;
+
   void _selectLanguage(CardLanguage language, AppSettings settings) {
     ref
         .read(settingsRepositoryProvider)
@@ -177,7 +184,11 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       _toast(_template.isBatch ? '请先输入单词列表（每行一个）' : '请先输入要学的单词');
       return;
     }
-    final prompt = _template.build(words, language: _resolvedLanguage());
+    final prompt = _template.build(
+      words,
+      language: _resolvedLanguage(),
+      accent: _accent(),
+    );
     await Clipboard.setData(ClipboardData(text: prompt));
     if (!mounted) return;
     _toast('Prompt 已复制，去 ChatGPT / Claude / DeepSeek 粘贴发送');
@@ -550,6 +561,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
                                   ? 'abandon'
                                   : _wordsController.text.trim(),
                               language: _resolvedLanguage(),
+                              accent: _accent(),
                             ),
                             style: const TextStyle(
                               fontFamily: 'monospace',

@@ -42,11 +42,17 @@ class PromptTemplate {
   ///
   /// [language] 决定模板里「英语词汇教研员」「美式音标」「英文例句」
   /// 这些说法怎么替换，所以同一套模板也能生成法语 / 日语 / 韩语 / 俄语的卡片。
-  String build(String words, {CardLanguage language = CardLanguage.english}) {
+  /// [accent] 只在英语下起作用：同一个模板换个口音就是另一份 Prompt，
+  /// 生成缓存的键里带着 Prompt 本身，所以换口音不会拿到旧答案。
+  String build(
+    String words, {
+    CardLanguage language = CardLanguage.english,
+    PhoneticAccent accent = PhoneticAccent.american,
+  }) {
     return body
         .replaceAll('{words}', _normalizeWords(words))
         .replaceAll('{langName}', language.label)
-        .replaceAll('{phoneticHint}', language.phoneticHint)
+        .replaceAll('{phoneticHint}', language.phoneticHint(accent: accent))
         .replaceAll('{exampleLang}', language.exampleLanguage);
   }
 
@@ -54,8 +60,9 @@ class PromptTemplate {
   String buildFromList(
     List<String> words, {
     CardLanguage language = CardLanguage.english,
+    PhoneticAccent accent = PhoneticAccent.american,
   }) =>
-      build(words.join('\n'), language: language);
+      build(words.join('\n'), language: language, accent: accent);
 
   static String _normalizeWords(String words) {
     final lines = words
@@ -157,6 +164,7 @@ String buildCompletionPrompt({
   required String word,
   required String definition,
   required CardLanguage language,
+  PhoneticAccent accent = PhoneticAccent.american,
   String? existingPhonetic,
   String? existingPartOfSpeech,
   String? existingExample,
@@ -184,7 +192,7 @@ String buildCompletionPrompt({
 单词：${word.trim()}
 释义：${definition.trim()}
 $knownBlock要求：
-1. phonetic：给${language.phoneticHint}；拿不准就给最接近的常见读音，不要编造。
+1. phonetic：给${language.phoneticHint(accent: accent)}；拿不准就给最接近的常见读音，不要编造。
 2. partOfSpeech：词性，用英文小写（noun / verb / adjective / adverb / phrase），必须与释义一致。
 3. example：一个地道的${language.exampleLanguage}例句，必须体现释义里的第一个义项，8-20 个词，不要翻译。
 4. note：一句中文记忆提示（词根、搭配、近义辨析任选其一），不超过 40 字，不要重复释义。
