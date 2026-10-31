@@ -22,6 +22,13 @@ $ErrorActionPreference = 'Stop'
 $dist = Join-Path $script:RepoRoot 'dist'
 New-Item -ItemType Directory -Force -Path $dist | Out-Null
 
+# Flutter 会把 dev 依赖 integration_test 也写进 Android 的插件注册表
+# （android\app\src\main\java\io\flutter\plugins\GeneratedPluginRegistrant.java），
+# 而 release 的 classpath 上没有那个包，javac 直接报「程序包不存在」。
+# 删掉这份陈旧副本，Gradle 会用它自己生成的那份（只含真实插件）。
+$registrant = Join-Path $script:RepoRoot 'android\app\src\main\java\io\flutter\plugins\GeneratedPluginRegistrant.java'
+if (Test-Path $registrant) { Remove-Item -Force $registrant }
+
 $args = @('build', 'apk', '--release')
 if ($Split) { $args += '--split-per-abi' }
 
