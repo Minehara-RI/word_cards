@@ -83,6 +83,8 @@ void main() {
           'wc_answer_log',
           'wc_settings',
           'wc_api_cache',
+          'wc_tombstones',
+          'wc_sync_meta',
         },
       );
     });

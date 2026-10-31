@@ -45,6 +45,17 @@ void main() {
         projectionBeepMs: 300,
         projectionSoundSource: PageTurnSoundSource.custom,
         projectionSoundPath: 'D:/ping.wav',
+        apiServerEnabled: true,
+        apiServerPort: 8770,
+        apiServerAllowLan: true,
+        apiServerKey: 'local-key',
+        apiServerDeckId: 'deck-1',
+        apiServerAutoComplete: true,
+        syncEnabled: true,
+        syncPort: 8771,
+        syncDeviceName: '书房的电脑',
+        syncPin: '2468',
+        syncLastAt: 1700000000000,
       );
 
       final AppSettings back = AppSettings.fromMap(original.toMap());
@@ -79,6 +90,33 @@ void main() {
       expect(back.projectionBeepMs, 300);
       expect(back.projectionSoundSource, PageTurnSoundSource.custom);
       expect(back.projectionSoundPath, 'D:/ping.wav');
+      // 局域网那一套：两个端口、口令、设备名、上次同步时间。
+      expect(back.apiServerEnabled, isTrue);
+      expect(back.apiServerPort, 8770);
+      expect(back.apiServerAllowLan, isTrue);
+      expect(back.apiServerKey, 'local-key');
+      expect(back.apiServerDeckId, 'deck-1');
+      expect(back.apiServerAutoComplete, isTrue);
+      expect(back.syncEnabled, isTrue);
+      expect(back.syncPort, 8771);
+      expect(back.syncDeviceName, '书房的电脑');
+      expect(back.syncPin, '2468');
+      expect(back.syncLastAt, 1700000000000);
+    });
+
+    test('端口越界会夹回可监听区间，默认端口和 Anki 一致', () {
+      expect(AppSettings.defaultApiServerPort, 8765);
+      expect(AppSettings.defaultSyncPort, 8766);
+      expect(
+        AppSettings.fromMap(<String, Object?>{'api_server_port': 80}).apiServerPort,
+        AppSettings.minServerPort,
+      );
+      expect(
+        AppSettings.fromMap(<String, Object?>{'sync_port': 99999}).syncPort,
+        AppSettings.maxServerPort,
+      );
+      expect(const AppSettings().apiServerEnabled, isFalse);
+      expect(const AppSettings().syncEnabled, isFalse);
     });
 
     test('主页面的 id 稳定，未知值回默认（作答）', () {

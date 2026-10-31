@@ -2,6 +2,7 @@ import 'models/answer_record.dart';
 import 'models/app_settings.dart';
 import 'models/cached_generation.dart';
 import 'models/deck.dart';
+import 'models/sync_snapshot.dart';
 import 'models/word_card.dart';
 
 /// 卡片仓库。逻辑层只依赖这个接口，不关心底层是 sembast 还是别的实现。
@@ -64,6 +65,26 @@ abstract interface class DeckRepository {
 
   /// 保证默认词库存在。
   Future<Deck> ensureDefault();
+}
+
+/// 设备同步用的本地状态：设备身份 + 删除记录。
+///
+/// 单独一个接口是因为它既不属于卡片也不属于卡组，而且只有同步链路会用到。
+abstract interface class SyncRepository {
+  /// 这台设备的稳定 id（第一次调用时生成并落库）。
+  Future<String> deviceId();
+
+  /// 所有删除记录（卡片与卡组）。
+  Future<List<SyncTombstone>> tombstones();
+
+  /// 记一条删除记录。同一个对象重复记时保留更晚的时间。
+  Future<void> addTombstone(SyncTombstone tombstone);
+
+  /// 应用对方同步过来的删除：记下墓碑，并把本地对应的数据删掉。
+  ///
+  /// 和本地的 deleteById 不是一回事：那个会把删除时间记成「现在」，
+  /// 用它来应用一条旧删除，会把对方后来改过的卡片又删掉一次。
+  Future<void> applyTombstone(SyncTombstone tombstone);
 }
 
 /// 用户配置仓库（单例文档）。

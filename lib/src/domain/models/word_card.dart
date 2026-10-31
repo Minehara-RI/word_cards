@@ -43,6 +43,17 @@ class WordCard {
   /// 干扰项的标准数量。
   static const int targetDistractorCount = targetOptionCount - 1;
 
+  /// 干扰项还没凑够时的标记标签。
+  ///
+  /// 外部写入（AnkiConnect 兼容接口）只给「词 + 释义」，不补足 4 个干扰项
+  /// 这张卡在五选一里就没法考。补不够就挂上这个标签，界面上能一眼看到，
+  /// 补全之后会自动摘掉。用标签而不是另建一张表：
+  /// 它天然跟着卡片走，导出、同步、Anki 里打开都能看到。
+  static const String incompleteTag = '待补全';
+
+  /// 这张卡还缺干扰项。
+  bool get isIncomplete => distractors.length < targetDistractorCount;
+
   final String id;
   final String word;
   final String definition;

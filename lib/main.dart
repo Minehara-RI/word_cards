@@ -12,8 +12,10 @@ import 'src/data/anki/anki_deck_repository.dart';
 import 'src/data/anki/anki_record_repository.dart';
 import 'src/data/anki/anki_schema.dart';
 import 'src/data/anki/anki_settings_repository.dart';
+import 'src/data/anki/anki_sync_repository.dart';
 import 'src/data/anki/sembast_migrator.dart';
 import 'src/state/providers.dart';
+import 'src/state/server_providers.dart';
 import 'src/ui/app.dart';
 import 'src/ui/presentation/presentation_window.dart';
 
@@ -59,6 +61,8 @@ Future<void> main(List<String> args) async {
             .overrideWithValue(AnkiSettingsRepository(collection)),
         apiCacheRepositoryProvider
             .overrideWithValue(AnkiApiCacheRepository(collection)),
+        syncRepositoryProvider
+            .overrideWithValue(AnkiSyncRepository(collection)),
       ],
       child: const WordCardsApp(),
     ),

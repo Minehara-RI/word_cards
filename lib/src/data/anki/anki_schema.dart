@@ -125,6 +125,8 @@ const List<String> kAnkiSchema = <String>[
 /// - wc_card_fsrs：FSRS 的记忆状态。单独一张表，开不开 FSRS 都不影响上面那张
 /// - wc_settings：应用自己的配置（API Key、主题、限时等）
 /// - wc_api_cache：模式 B 的生成缓存（同一个 Prompt 在缓存期内只请求一次）
+/// - wc_tombstones：设备同步用的删除记录（卡片/卡组的 uid + 删除时间）
+/// - wc_sync_meta：同步用的设备身份（设备 id），和用户配置分开存
 const List<String> kAppSchema = <String>[
   'create table if not exists wc_card_ids ('
       'uid text primary key, '
@@ -180,6 +182,20 @@ const List<String> kAppSchema = <String>[
       'prompt_tokens integer not null default 0, '
       'completion_tokens integer not null default 0, '
       'created_at integer not null)',
+  // 删除必须自己记一份：Anki 的 graves 存的是本地整数 note id，
+  // 换一台设备之后那个 id 指向的是别的卡，靠它同步等于随机删词。
+  'create table if not exists wc_tombstones ('
+      'uid text not null, '
+      'kind text not null, '
+      'deck_uid text, '
+      'deleted_at integer not null, '
+      'device_id text, '
+      'primary key (uid, kind))',
+  'create index if not exists ix_wc_tombstones_deleted '
+      'on wc_tombstones (deleted_at)',
+  'create table if not exists wc_sync_meta ('
+      'key text primary key, '
+      'value text not null)',
 ];
 
 /// 卡片模板的样式表。

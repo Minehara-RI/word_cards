@@ -162,8 +162,12 @@ left join wc_card_fsrs f on f.uid = i.uid
   Future<void> deleteById(String id) async {
     final int? noteId = _collection.noteIdForCard(id);
     if (noteId == null) return;
+    final ResultSet cardRows =
+        _db.select('select did from cards where nid = ?', <Object?>[noteId]);
+    final int? did = cardRows.isEmpty ? null : cardRows.first['did'] as int?;
     _db.execute('begin immediate');
     try {
+      _recordTombstone(id, deckUid: did == null ? null : _collection.deckUidForId(did));
       _db.execute(
         'insert into graves (usn, oid, type) values (?,?,?)',
         <Object?>[_ankiUsn, noteId, 0],
@@ -224,9 +228,33 @@ left join wc_card_fsrs f on f.uid = i.uid
     _collection.notify();
   }
 
+  /// 记一条删除记录，让别的设备也知道这张卡是「删掉的」而不是「还没同步过来」。
+  ///
+  /// 时间用当前时间；应用对方的删除走 AnkiSyncRepository.applyTombstone，
+  /// 那边会沿用对方的删除时间，不会把时间推到现在。
+  void _recordTombstone(String uid, {String? deckUid}) {
+    _db.execute(
+      'insert into wc_tombstones (uid, kind, deck_uid, deleted_at, device_id) '
+      'values (?,?,?,?,null) '
+      'on conflict(uid, kind) do update set '
+      'deleted_at = max(deleted_at, excluded.deleted_at)',
+      <Object?>[
+        uid,
+        'card',
+        deckUid,
+        DateTime.now().millisecondsSinceEpoch,
+      ],
+    );
+  }
+
   @override
   Future<void> deleteAll({String? deckId}) async {
     if (deckId == null) {
+      // 先记墓碑再删行：清空也要能同步过去，否则对方一同步又全回来了。
+      final ResultSet all = _db.select('select uid from wc_card_ids');
+      for (final Row row in all) {
+        _recordTombstone((row['uid'] as String?) ?? '');
+      }
       _db.execute('delete from cards');
       _db.execute('delete from notes');
       _db.execute('delete from wc_card_ids');
@@ -252,6 +280,8 @@ left join wc_card_fsrs f on f.uid = i.uid
     _db.execute('begin immediate');
     try {
       for (final List<int> pair in pairs) {
+        final String? uid = _collection.cardUidForNote(pair[1]);
+        if (uid != null) _recordTombstone(uid, deckUid: deckId);
         _db.execute('delete from cards where id = ?', <Object?>[pair[0]]);
         _db.execute(
           'delete from notes where id = ? and not exists '

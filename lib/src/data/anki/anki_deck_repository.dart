@@ -1,4 +1,5 @@
 import '../../domain/models/deck.dart';
+import '../../domain/models/sync_snapshot.dart';
 import '../../domain/repositories.dart';
 import 'anki_collection.dart';
 import 'anki_schema.dart';
@@ -79,6 +80,19 @@ class AnkiDeckRepository implements DeckRepository {
     if (id == Deck.defaultDeckId) return;
     final int? ankiId = _collection.deckIdForUid(id);
     if (ankiId == null) return;
+    // 卡组删除也要能同步过去：记一条卡组墓碑，对方照样把卡挪回默认卡组。
+    _collection.db.execute(
+      'insert into wc_tombstones (uid, kind, deck_uid, deleted_at, device_id) '
+      'values (?,?,?,?,null) '
+      'on conflict(uid, kind) do update set '
+      'deleted_at = max(deleted_at, excluded.deleted_at)',
+      <Object?>[
+        id,
+        SyncTombstone.kindDeck,
+        null,
+        DateTime.now().millisecondsSinceEpoch,
+      ],
+    );
     _collection.removeDeckJson(ankiId);
     // 牌组没了，里面的卡片回到默认牌组，而不是被静默删掉。
     _collection.db.execute(

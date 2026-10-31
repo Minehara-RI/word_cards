@@ -276,6 +276,17 @@ class AppSettings {
     this.apiCallCount = 0,
     this.apiPromptTokens = 0,
     this.apiCompletionTokens = 0,
+    this.apiServerEnabled = false,
+    this.apiServerPort = defaultApiServerPort,
+    this.apiServerAllowLan = false,
+    this.apiServerKey,
+    this.apiServerDeckId,
+    this.apiServerAutoComplete = false,
+    this.syncEnabled = false,
+    this.syncPort = defaultSyncPort,
+    this.syncDeviceName,
+    this.syncPin,
+    this.syncLastAt,
   });
 
   /// 「题目数量」里的「全部」：不按数量截断，出筛选之后的整份词表。
@@ -471,6 +482,50 @@ class AppSettings {
   /// 夹到合法区间后的目标保留率。
   double get retention => normalizeRetention(fsrsDesiredRetention);
 
+  // ---- 外部写入（AnkiConnect 兼容服务） ----
+
+  /// 在应用里开一个 AnkiConnect 兼容的 HTTP 服务，让 Yomitan、浏览器插件、
+  /// 脚本或 AI agent 把词直接写进这里。
+  ///
+  /// 和「AI 生成」是反方向的两件事：那个是本应用去调别人，这个是被别人调。
+  final bool apiServerEnabled;
+
+  /// 监听端口。默认 8765，和 Anki 插件一样。
+  final int apiServerPort;
+
+  /// 是否允许局域网里的其它机器访问。关着就只听 127.0.0.1。
+  final bool apiServerAllowLan;
+
+  /// 访问口令。开着局域网时留空等于「同网段谁都能写你的词库」，
+  /// 设置页会拦一下；技术上仍然允许（局域网里自建、只想图省事的场景）。
+  final String? apiServerKey;
+
+  /// 外部写入固定进哪个卡组。为 null 表示跟随客户端给的 deckName，
+  /// 客户端没给就进当前卡组。锁死之后客户端的 deckName 一律被忽略。
+  final String? apiServerDeckId;
+
+  /// 外部写进来的词干扰项不够时，是否顺手用 AI 补全（需要配好 API）。
+  ///
+  /// 默认关：外部写入应该是快的，不该因为一次模型调用而卡住或失败。
+  final bool apiServerAutoComplete;
+
+  // ---- 设备同步 ----
+
+  /// 是否监听同步请求（这个开关只管「别人来拉」，往里推永远允许）。
+  final bool syncEnabled;
+
+  /// 同步服务端口，默认 8766。
+  final int syncPort;
+
+  /// 这台设备在对方界面上显示的名字。为空时用默认名。
+  final String? syncDeviceName;
+
+  /// 同步口令：两边填一样才肯交换数据。为空表示不校验。
+  final String? syncPin;
+
+  /// 上次同步成功的时间（毫秒时间戳），只用于界面提示。
+  final int? syncLastAt;
+
   // ---- 用量统计 ----
   final int apiCallCount;
   final int apiPromptTokens;
@@ -496,6 +551,20 @@ class AppSettings {
 
   /// 0 表示不缓存；上限 30 天，再长就没有意义了。
   static const int maxApiCacheHours = 24 * 30;
+
+  // ---- 局域网：外部写入（AnkiConnect 兼容）与设备同步 ----
+
+  /// AnkiConnect 的默认端口，和 Anki 插件一致：Yomitan 这类客户端不用改配置。
+  static const int defaultApiServerPort = 8765;
+
+  /// 设备同步单独占一个端口。关掉 AnkiConnect 不该顺手把同步一起关掉，
+  /// 端口分开之后两条链路的防火墙规则也不会互相牵连。
+  static const int defaultSyncPort = 8766;
+
+  static const int minServerPort = 1024;
+  static const int maxServerPort = 65535;
+
+  static int normalizePort(int port) => port.clamp(minServerPort, maxServerPort);
 
   static int normalizeApiTimeout(int seconds) =>
       seconds.clamp(minApiTimeoutSeconds, maxApiTimeoutSeconds);
@@ -574,6 +643,20 @@ class AppSettings {
     int? apiPromptTokens,
     int? apiCompletionTokens,
     bool clearApiKey = false,
+    bool? apiServerEnabled,
+    int? apiServerPort,
+    bool? apiServerAllowLan,
+    String? apiServerKey,
+    bool clearApiServerKey = false,
+    String? apiServerDeckId,
+    bool clearApiServerDeckId = false,
+    bool? apiServerAutoComplete,
+    bool? syncEnabled,
+    int? syncPort,
+    String? syncDeviceName,
+    String? syncPin,
+    bool clearSyncPin = false,
+    int? syncLastAt,
   }) {
     return AppSettings(
       apiBaseUrl: apiBaseUrl ?? this.apiBaseUrl,
@@ -632,6 +715,20 @@ class AppSettings {
       apiCallCount: apiCallCount ?? this.apiCallCount,
       apiPromptTokens: apiPromptTokens ?? this.apiPromptTokens,
       apiCompletionTokens: apiCompletionTokens ?? this.apiCompletionTokens,
+      apiServerEnabled: apiServerEnabled ?? this.apiServerEnabled,
+      apiServerPort: normalizePort(apiServerPort ?? this.apiServerPort),
+      apiServerAllowLan: apiServerAllowLan ?? this.apiServerAllowLan,
+      apiServerKey:
+          clearApiServerKey ? null : (apiServerKey ?? this.apiServerKey),
+      apiServerDeckId: clearApiServerDeckId
+          ? null
+          : (apiServerDeckId ?? this.apiServerDeckId),
+      apiServerAutoComplete: apiServerAutoComplete ?? this.apiServerAutoComplete,
+      syncEnabled: syncEnabled ?? this.syncEnabled,
+      syncPort: normalizePort(syncPort ?? this.syncPort),
+      syncDeviceName: syncDeviceName ?? this.syncDeviceName,
+      syncPin: clearSyncPin ? null : (syncPin ?? this.syncPin),
+      syncLastAt: syncLastAt ?? this.syncLastAt,
     );
   }
 
@@ -680,6 +777,17 @@ class AppSettings {
         'api_call_count': apiCallCount,
         'api_prompt_tokens': apiPromptTokens,
         'api_completion_tokens': apiCompletionTokens,
+        'api_server_enabled': apiServerEnabled ? 1 : 0,
+        'api_server_port': apiServerPort,
+        'api_server_allow_lan': apiServerAllowLan ? 1 : 0,
+        'api_server_key': apiServerKey,
+        'api_server_deck_id': apiServerDeckId,
+        'api_server_auto_complete': apiServerAutoComplete ? 1 : 0,
+        'sync_enabled': syncEnabled ? 1 : 0,
+        'sync_port': syncPort,
+        'sync_device_name': syncDeviceName,
+        'sync_pin': syncPin,
+        'sync_last_at': syncLastAt,
       };
 
   factory AppSettings.fromMap(Map<String, Object?> map) {
@@ -767,11 +875,34 @@ class AppSettings {
         apiCallCount: (map['api_call_count'] as num?)?.toInt() ?? 0,
         apiPromptTokens: (map['api_prompt_tokens'] as num?)?.toInt() ?? 0,
         apiCompletionTokens: (map['api_completion_tokens'] as num?)?.toInt() ?? 0,
+        apiServerEnabled: (map['api_server_enabled'] as num?)?.toInt() == 1,
+        apiServerPort: normalizePort(
+          (map['api_server_port'] as num?)?.toInt() ?? defaultApiServerPort,
+        ),
+        apiServerAllowLan: (map['api_server_allow_lan'] as num?)?.toInt() == 1,
+        apiServerKey: _trimmed(map['api_server_key']),
+        apiServerDeckId: _trimmed(map['api_server_deck_id']),
+        apiServerAutoComplete:
+            (map['api_server_auto_complete'] as num?)?.toInt() == 1,
+        syncEnabled: (map['sync_enabled'] as num?)?.toInt() == 1,
+        syncPort: normalizePort(
+          (map['sync_port'] as num?)?.toInt() ?? defaultSyncPort,
+        ),
+        syncDeviceName: _trimmed(map['sync_device_name']),
+        syncPin: _trimmed(map['sync_pin']),
+        syncLastAt: (map['sync_last_at'] as num?)?.toInt(),
       );
   }
 
   /// 老版本「每轮题数」的默认值。现在的新默认是 [allQuestions]。
   static const int legacyDefaultQuestionCount = 10;
+
+  /// 把存下来的字符串读干净：空白串一律当没存。
+  static String? _trimmed(Object? value) {
+    if (value is! String) return null;
+    final String text = value.trim();
+    return text.isEmpty ? null : text;
+  }
 
   /// 把存下来的标签列表读干净：去空白、去重、丢掉空项。
   static List<String> _tagList(Object? value) {

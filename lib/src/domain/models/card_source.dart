@@ -6,7 +6,9 @@ enum CardSource {
   manualImport('manual_import', '手动导入'),
   api('api', 'API 生成'),
   // 标签里不能有空格（Anki 按空格切标签），所以这里也写成连着的。
-  anki('anki', 'Anki导入');
+  anki('anki', 'Anki导入'),
+  // 外部工具（Yomitan、脚本、AI agent）通过 AnkiConnect 兼容接口写进来的。
+  external('external', '外部写入');
 
   const CardSource(this.id, this.label);
 

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:word_flashcards/src/domain/models/answer_record.dart';
 import 'package:word_flashcards/src/domain/models/app_settings.dart';
 import 'package:word_flashcards/src/domain/models/deck.dart';
+import 'package:word_flashcards/src/domain/models/sync_snapshot.dart';
 import 'package:word_flashcards/src/domain/models/word_card.dart';
 import 'package:word_flashcards/src/domain/repositories.dart';
 
@@ -229,6 +230,35 @@ class FakeDeckRepository implements DeckRepository {
     await upsert(deck);
     return deck;
   }
+}
+
+/// 内存里的同步状态：设备 id + 删除记录。
+///
+/// 不做「应用删除」那一步（假仓库里没有真正要删的东西），
+/// 只记墓碑：测试关心的是合并算法，不是删行。
+class FakeSyncRepository implements SyncRepository {
+  final Map<String, SyncTombstone> _stones = <String, SyncTombstone>{};
+  String deviceIdValue = 'test-device';
+
+  @override
+  Future<String> deviceId() async => deviceIdValue;
+
+  @override
+  Future<List<SyncTombstone>> tombstones() async =>
+      List<SyncTombstone>.of(_stones.values);
+
+  @override
+  Future<void> addTombstone(SyncTombstone tombstone) async {
+    final String key = '${tombstone.kind}:${tombstone.uid}';
+    final SyncTombstone? existing = _stones[key];
+    if (existing == null || tombstone.deletedAt.isAfter(existing.deletedAt)) {
+      _stones[key] = tombstone;
+    }
+  }
+
+  @override
+  Future<void> applyTombstone(SyncTombstone tombstone) =>
+      addTombstone(tombstone);
 }
 
 class FakeSettingsRepository implements SettingsRepository {

@@ -8,10 +8,12 @@ import 'package:word_flashcards/src/data/anki/anki_collection.dart';
 import 'package:word_flashcards/src/data/anki/anki_deck_repository.dart';
 import 'package:word_flashcards/src/data/anki/anki_record_repository.dart';
 import 'package:word_flashcards/src/data/anki/anki_settings_repository.dart';
+import 'package:word_flashcards/src/data/anki/anki_sync_repository.dart';
 import 'package:word_flashcards/src/domain/models/card_source.dart';
 import 'package:word_flashcards/src/domain/models/word_card.dart';
 import 'package:word_flashcards/src/domain/repositories.dart';
 import 'package:word_flashcards/src/state/providers.dart';
+import 'package:word_flashcards/src/state/server_providers.dart';
 
 import 'fake_api_cache.dart';
 import 'fake_repositories.dart';
@@ -27,7 +29,8 @@ class TestHarness {
     this.records,
     this.decks,
     this.settings,
-    this.cache, [
+    this.cache,
+    this.sync, [
     this.collection,
   ]);
 
@@ -38,6 +41,9 @@ class TestHarness {
 
   /// 模式 B 的生成缓存（真实现 / 内存实现）。
   final ApiCacheRepository cache;
+
+  /// 设备同步状态（设备 id + 删除记录）。
+  final SyncRepository sync;
 
   /// 内存里的 Anki 集合，测试结束后关掉。
   final AnkiCollection? collection;
@@ -52,6 +58,7 @@ class TestHarness {
       decks,
       AnkiSettingsRepository(collection),
       AnkiApiCacheRepository(collection),
+      AnkiSyncRepository(collection),
       collection,
     );
   }
@@ -64,6 +71,7 @@ class TestHarness {
       decks,
       FakeSettingsRepository(),
       FakeApiCacheRepository(),
+      FakeSyncRepository(),
     );
   }
 
@@ -74,6 +82,7 @@ class TestHarness {
           deckRepositoryProvider.overrideWithValue(decks),
           settingsRepositoryProvider.overrideWithValue(settings),
           apiCacheRepositoryProvider.overrideWithValue(cache),
+          syncRepositoryProvider.overrideWithValue(sync),
         ],
         child: child,
       );
