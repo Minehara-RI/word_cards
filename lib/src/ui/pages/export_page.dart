@@ -11,8 +11,12 @@ import '../../domain/models/answer_record.dart';
 import '../../domain/models/word_card.dart';
 import '../../state/providers.dart';
 import '../widgets/section_card.dart';
+import '../widgets/sync_panel.dart';
 
-/// 「导出」页：卡片 JSON、答题记录 CSV，以及一份 Anki 能直接打开的数据库。
+/// 「导出与同步」页：导出文件（卡片 JSON / 答题 CSV / Anki 库）+ 局域网设备同步。
+///
+/// 两件事放在一起是因为它们是同一个心事：把数据从这台设备搬走。
+/// 同步的设置在 [SyncPanel] 里，导出按钮在下面那张卡片里。
 class ExportPage extends ConsumerStatefulWidget {
   const ExportPage({super.key});
 
@@ -94,6 +98,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: <Widget>[
+        const SyncPanel(),
         SectionCard(
           title: '导出',
           subtitle: '文件会写到系统文档目录下的 word_flashcards_exports 文件夹。',

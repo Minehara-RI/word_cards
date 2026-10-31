@@ -1,16 +1,18 @@
 import 'dart:io';
 
+import '../../core/server_ports.dart';
+
 /// 把用户手输的地址整理成可以请求的 base url。
 ///
 /// 允许的写法（局域网里怎么顺手怎么输）：
-/// - `192.168.1.5`                      → 补默认端口
-/// - `192.168.1.5:8766`
-/// - `http://192.168.1.5:8766/`
-/// - `[fe80::1]:8766`（IPv6 要带方括号）
+/// - `192.168.1.5`                      → 补上固定的同步端口
+/// - `192.168.1.5:5033`
+/// - `http://192.168.1.5:5033/`
+/// - `[fe80::1]:5033`（IPv6 要带方括号）
 ///
 /// 认不出来就返回 null，界面提示「地址看起来不对」，不要拿一个
 /// 拼错的地址去发请求，那样报出来的错会误导人（看起来像对方没开）。
-String? normalizeSyncBaseUrl(String raw, {int defaultPort = 8766}) {
+String? normalizeSyncBaseUrl(String raw, {int defaultPort = kSyncPort}) {
   String text = raw.trim();
   if (text.isEmpty) return null;
   if (!text.contains('://')) text = 'http://$text';

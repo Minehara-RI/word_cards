@@ -39,7 +39,7 @@ void main() {
 
   testWidgets('五个入口都在，默认停在作答', (tester) async {
     await boot(tester);
-    for (final String label in <String>['加入', '作答', '演示', '统计', '导出']) {
+    for (final String label in <String>['加入', '作答', '演示', '统计', '导出与同步']) {
       expect(find.text(label), findsOneWidget, reason: '缺少入口：$label');
     }
     expect(find.text('开始测验'), findsOneWidget);
@@ -72,15 +72,16 @@ void main() {
     expect(find.text('开始演示'), findsOneWidget);
   });
 
-  testWidgets('能切到统计页与导出页', (tester) async {
+  testWidgets('能切到统计页与「导出与同步」页', (tester) async {
     await boot(tester);
 
     await tester.tap(find.text('统计'));
     await tester.pumpAndSettle();
     expect(find.text('统计'), findsWidgets);
 
-    await tester.tap(find.text('导出'));
+    await tester.tap(find.text('导出与同步'));
     await tester.pumpAndSettle();
+    expect(find.text('设备同步'), findsOneWidget);
     expect(find.text('导出卡片 JSON（0）'), findsOneWidget);
     expect(find.text('关于数据库'), findsOneWidget);
     expect(find.textContaining('collection.anki2'), findsWidgets);

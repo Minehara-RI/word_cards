@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:word_flashcards/src/core/server_ports.dart';
 import 'package:word_flashcards/src/domain/models/app_settings.dart';
 import 'package:word_flashcards/src/domain/models/card_language.dart';
 import 'package:word_flashcards/src/domain/models/quiz_direction.dart';
@@ -46,13 +47,11 @@ void main() {
         projectionSoundSource: PageTurnSoundSource.custom,
         projectionSoundPath: 'D:/ping.wav',
         apiServerEnabled: true,
-        apiServerPort: 8770,
         apiServerAllowLan: true,
         apiServerKey: 'local-key',
         apiServerDeckId: 'deck-1',
         apiServerAutoComplete: true,
         syncEnabled: true,
-        syncPort: 8771,
         syncDeviceName: '书房的电脑',
         syncPin: '2468',
         syncLastAt: 1700000000000,
@@ -92,29 +91,31 @@ void main() {
       expect(back.projectionSoundPath, 'D:/ping.wav');
       // 局域网那一套：两个端口、口令、设备名、上次同步时间。
       expect(back.apiServerEnabled, isTrue);
-      expect(back.apiServerPort, 8770);
       expect(back.apiServerAllowLan, isTrue);
       expect(back.apiServerKey, 'local-key');
       expect(back.apiServerDeckId, 'deck-1');
       expect(back.apiServerAutoComplete, isTrue);
       expect(back.syncEnabled, isTrue);
-      expect(back.syncPort, 8771);
       expect(back.syncDeviceName, '书房的电脑');
       expect(back.syncPin, '2468');
       expect(back.syncLastAt, 1700000000000);
     });
 
-    test('端口越界会夹回可监听区间，默认端口和 Anki 一致', () {
-      expect(AppSettings.defaultApiServerPort, 8765);
-      expect(AppSettings.defaultSyncPort, 8766);
-      expect(
-        AppSettings.fromMap(<String, Object?>{'api_server_port': 80}).apiServerPort,
-        AppSettings.minServerPort,
-      );
-      expect(
-        AppSettings.fromMap(<String, Object?>{'sync_port': 99999}).syncPort,
-        AppSettings.maxServerPort,
-      );
+    test('两个端口是常量，不进设置、也不受旧设置块影响', () {
+      expect(kApiServerPort, 8766);
+      expect(kSyncPort, 5033);
+      // 老库的 JSON 里可能留着 api_server_port / sync_port，读的时候直接忽略，
+      // 免得「以前改过端口」的设备升级后监听在一个没人知道的端口上。
+      final AppSettings legacy = AppSettings.fromMap(<String, Object?>{
+        'api_server_port': 9999,
+        'sync_port': 9999,
+        'api_server_enabled': 1,
+        'sync_enabled': 1,
+      });
+      expect(legacy.apiServerEnabled, isTrue);
+      expect(legacy.syncEnabled, isTrue);
+      expect(legacy.toMap().containsKey('api_server_port'), isFalse);
+      expect(legacy.toMap().containsKey('sync_port'), isFalse);
       expect(const AppSettings().apiServerEnabled, isFalse);
       expect(const AppSettings().syncEnabled, isFalse);
     });

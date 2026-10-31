@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:word_flashcards/src/core/server_ports.dart';
 import 'package:word_flashcards/src/data/sync/sync_client.dart';
 import 'package:word_flashcards/src/data/sync/sync_server.dart';
 import 'package:word_flashcards/src/data/sync/sync_service.dart';
@@ -15,7 +16,8 @@ import 'support/test_harness.dart';
 void main() {
   group('地址整理', () {
     test('只填 IP 就补默认端口', () {
-      expect(normalizeSyncBaseUrl('192.168.1.5'), 'http://192.168.1.5:8766');
+      // 只填 IP 时补的是固定端口 5033。
+      expect(normalizeSyncBaseUrl('192.168.1.5'), 'http://192.168.1.5:5033');
       expect(
         normalizeSyncBaseUrl('192.168.1.5:9000'),
         'http://192.168.1.5:9000',
@@ -25,9 +27,11 @@ void main() {
         'http://192.168.1.5:9000',
       );
       expect(
-        normalizeSyncBaseUrl('[fe80::1]:8766'),
-        'http://[fe80::1]:8766',
+        normalizeSyncBaseUrl('[fe80::1]:5033'),
+        'http://[fe80::1]:5033',
       );
+      expect(kSyncPort, 5033);
+      expect(kApiServerPort, 8766);
       expect(normalizeSyncBaseUrl(''), isNull);
       expect(normalizeSyncBaseUrl('http://'), isNull);
     });

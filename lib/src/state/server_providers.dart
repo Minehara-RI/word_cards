@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/server_ports.dart';
 import '../data/ai/card_completion.dart';
 import '../data/api/anki_connect_service.dart';
 import '../data/api/anki_connect_server.dart';
@@ -180,7 +181,6 @@ class AnkiConnectServerController extends Notifier<ServerRuntime> {
   Future<void> _apply(int token, AppSettings settings) async {
     final String signature = [
       settings.apiServerEnabled,
-      settings.apiServerPort,
       settings.apiServerAllowLan,
     ].join('|');
 
@@ -200,7 +200,7 @@ class AnkiConnectServerController extends Notifier<ServerRuntime> {
       final AnkiConnectHandle handle = await startAnkiConnectServer(
         service: service,
         settings: repository,
-        port: settings.apiServerPort,
+        port: kApiServerPort,
         allowLan: settings.apiServerAllowLan,
       );
       if (token != _token) {
@@ -212,7 +212,7 @@ class AnkiConnectServerController extends Notifier<ServerRuntime> {
       state = ServerRuntime(running: true, port: handle.port);
     } on SocketException catch (error) {
       if (token != _token) return;
-      state = ServerRuntime(error: _explain(error, settings.apiServerPort));
+      state = ServerRuntime(error: _explain(error, kApiServerPort));
     } on Object catch (error) {
       if (token != _token) return;
       state = ServerRuntime(error: '外部写入没开起来：$error');
@@ -230,7 +230,8 @@ class AnkiConnectServerController extends Notifier<ServerRuntime> {
     if (text.contains('10048') ||
         text.contains('98') ||
         text.contains('address already in use')) {
-      return '端口 $port 被占用了。Anki 自己也用 8765，先关掉 Anki 或者换一个端口。';
+      return '端口 $port 被占用了：先关掉占着它的程序（Anki 插件的默认端口是 8765，'
+          '本应用固定用 8766，一般不会撞）。';
     }
     if (text.contains('10013') || text.contains('permission')) {
       return '系统不允许监听端口 $port，换一个 1024 以上的端口试试。';
@@ -270,7 +271,6 @@ class SyncServerController extends Notifier<ServerRuntime> {
   Future<void> _apply(int token, AppSettings settings) async {
     final String signature = [
       settings.syncEnabled,
-      settings.syncPort,
       settings.syncPin ?? '',
       settings.syncDeviceName ?? '',
     ].join('|');
@@ -291,7 +291,7 @@ class SyncServerController extends Notifier<ServerRuntime> {
     try {
       final SyncServerHandle handle = await startSyncServer(
         service: service,
-        port: settings.syncPort,
+        port: kSyncPort,
         deviceName: () => deviceName,
         pin: () => pin,
       );
@@ -305,7 +305,7 @@ class SyncServerController extends Notifier<ServerRuntime> {
     } on SocketException catch (error) {
       if (token != _token) return;
       state = ServerRuntime(
-        error: AnkiConnectServerController._explain(error, settings.syncPort),
+        error: AnkiConnectServerController._explain(error, kSyncPort),
       );
     } on Object catch (error) {
       if (token != _token) return;
@@ -378,14 +378,11 @@ class SyncRunner extends Notifier<SyncRunState> {
 
   Future<void> run(String address, {String? pin}) async {
     if (state.busy) return;
-    final String? base = normalizeSyncBaseUrl(
-      address,
-      defaultPort: ref.read(currentSettingsProvider).syncPort,
-    );
+    final String? base = normalizeSyncBaseUrl(address);
     if (base == null) {
-      state = const SyncRunState(
+      state = SyncRunState(
         stage: SyncStage.failed,
-        message: '地址看起来不对。填对方的 IP，例如 192.168.1.5 或 192.168.1.5:8766。',
+        message: '地址看起来不对。填对方的 IP 就行，例如 192.168.1.5（端口固定是 $kSyncPort）。',
       );
       return;
     }

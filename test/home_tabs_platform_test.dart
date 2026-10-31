@@ -62,7 +62,7 @@ void main() {
     testWidgets('手机端只画四个入口，找不到「演示」', (WidgetTester tester) async {
       await pump(tester, const HomeShell(target: PlatformTarget.mobile));
 
-      for (final String label in <String>['加入', '作答', '统计', '导出']) {
+      for (final String label in <String>['加入', '作答', '统计', '导出与同步']) {
         expect(find.text(label), findsOneWidget, reason: '缺少入口：$label');
       }
       expect(find.text('演示'), findsNothing);

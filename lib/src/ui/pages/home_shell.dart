@@ -13,7 +13,7 @@ import 'study_page.dart';
 
 /// 主界面上要显示哪几个页面入口。
 ///
-/// 桌面端五个（加入 / 作答 / 演示 / 统计 / 导出）；
+/// 桌面端五个（加入 / 作答 / 演示 / 统计 / 导出与同步）；
 /// 手机端只有四个：课堂投影是「一台电脑接投影仪」的场景，
 /// 手机不做投屏，所以「演示」整页不给 —— 入口、页面、设置一起藏。
 List<String> visibleHomeTabs(PlatformTarget target) => target.isDesktop
@@ -24,7 +24,7 @@ List<String> visibleHomeTabs(PlatformTarget target) => target.isDesktop
 
 /// 主界面：上面一排页面入口，下面是当前页。
 ///
-/// 桌面端的入口顺序和 Anki 的习惯一致：加入 -> 作答 -> 演示 -> 统计 -> 导出。
+/// 桌面端的入口顺序和 Anki 的习惯一致：加入 -> 作答 -> 演示 -> 统计 -> 导出与同步。
 class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key, this.target});
 
@@ -55,8 +55,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         _NavItem(Icons.slideshow_outlined, '演示', '课堂投影，自动翻页'),
     AppSettings.statsHomeTab:
         _NavItem(Icons.insights_outlined, '统计', '正确率与掌握度'),
-    AppSettings.exportHomeTab:
-        _NavItem(Icons.ios_share_outlined, '导出', 'JSON / CSV / Anki 库'),
+    AppSettings.exportHomeTab: _NavItem(
+      Icons.ios_share_outlined,
+      '导出与同步',
+      '导出 JSON / CSV / Anki 库，或在这一页和设备同步',
+    ),
   };
 
   // 默认停在「作答」，没卡片时作答页会把人引到「加入」。

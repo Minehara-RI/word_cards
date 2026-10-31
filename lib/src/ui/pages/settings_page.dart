@@ -5,9 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app_version.dart';
+import '../../core/server_ports.dart';
 import '../../data/ai/ai_providers.dart';
 import '../../data/ai/api_client.dart';
-import '../../data/sync/sync_url.dart';
 import '../../domain/models/app_settings.dart';
 import '../../domain/models/card_language.dart';
 import '../../domain/models/deck.dart';
@@ -18,7 +18,6 @@ import '../fonts.dart';
 import '../platform_target.dart';
 import '../widgets/deck_picker.dart';
 import '../widgets/number_field.dart';
-import 'sync_page.dart';
 
 /// 设置页只放「全局的、跟一次答题无关的」东西：
 /// 外观、卡组、默认语言、AI 配置、数据与关于。
@@ -273,7 +272,6 @@ class SettingsPage extends ConsumerWidget {
               ),
               const _ApiSection(),
               const _AnkiConnectSection(),
-              const _SyncSection(),
               _Section(
                 title: '数据',
                 child: Column(
@@ -987,8 +985,7 @@ class _AnkiConnectSectionState extends ConsumerState<_AnkiConnectSection> {
     final ServerRuntime status = ref.watch(ankiConnectServerProvider);
     final List<Deck> decks = ref.watch(decksProvider).value ?? const <Deck>[];
     final ThemeData theme = Theme.of(context);
-    final String url =
-        'http://127.0.0.1:' + settings.apiServerPort.toString() + '/';
+    final String url = 'http://127.0.0.1:$kApiServerPort/';
     final bool keyEmpty = (settings.apiServerKey ?? '').isEmpty;
     // 锁定的卡组可能已经被删掉：这时下拉框要退回「跟随客户端」，
     // 否则 DropdownButton 会因为当前值不在候选项里直接抛断言。
@@ -1027,22 +1024,13 @@ class _AnkiConnectSectionState extends ConsumerState<_AnkiConnectSection> {
           ),
           if (settings.apiServerEnabled) ...<Widget>[
             const SizedBox(height: 6),
-            Wrap(
-              spacing: 16,
-              runSpacing: 12,
-              crossAxisAlignment: WrapCrossAlignment.center,
+            Row(
               children: <Widget>[
-                NumberField(
-                  fieldKey: const Key('api-server-port'),
-                  label: '端口',
-                  value: settings.apiServerPort,
-                  min: AppSettings.minServerPort,
-                  max: AppSettings.maxServerPort,
-                  width: 150,
-                  onCommit: (int port) => _save(
-                    (AppSettings s) => s.copyWith(apiServerPort: port),
-                  ),
+                Text(
+                  '端口固定 $kApiServerPort',
+                  style: theme.textTheme.labelLarge,
                 ),
+                const SizedBox(width: 12),
                 OutlinedButton.icon(
                   onPressed: () => _copy(url),
                   icon: const Icon(Icons.copy_outlined),
@@ -1053,8 +1041,7 @@ class _AnkiConnectSectionState extends ConsumerState<_AnkiConnectSection> {
             const SizedBox(height: 8),
             Text(
               '客户端里就填这个地址（Yomitan：设置 → Anki → 自定义 AnkiConnect URL）。'
-              '默认端口和 Anki 插件一样是 8765，所以本机装了 Anki 的话要么关掉它，'
-              '要么把这里改成 8766 之类的空端口。',
+              '端口固定是 $kApiServerPort：8765 留给 Anki 官方插件，两边同时装不会抢端口。',
               style: theme.textTheme.bodySmall,
             ),
             SwitchListTile(
@@ -1131,204 +1118,6 @@ class _AnkiConnectSectionState extends ConsumerState<_AnkiConnectSection> {
               ),
             ),
           ],
-        ],
-      ),
-    );
-  }
-}
-
-/// 「设备同步」这一块。
-class _SyncSection extends ConsumerStatefulWidget {
-  const _SyncSection();
-
-  @override
-  ConsumerState<_SyncSection> createState() => _SyncSectionState();
-}
-
-class _SyncSectionState extends ConsumerState<_SyncSection> {
-  late final TextEditingController _name;
-  late final TextEditingController _pin;
-
-  @override
-  void initState() {
-    super.initState();
-    final AppSettings settings = ref.read(currentSettingsProvider);
-    _name = TextEditingController(text: settings.syncDeviceName ?? '');
-    _pin = TextEditingController(text: settings.syncPin ?? '');
-  }
-
-  @override
-  void dispose() {
-    _name.dispose();
-    _pin.dispose();
-    super.dispose();
-  }
-
-  Future<void> _save(AppSettings Function(AppSettings current) change) async {
-    final AppSettings settings = ref.read(currentSettingsProvider);
-    await ref.read(settingsRepositoryProvider).save(change(settings));
-  }
-
-  void _commitName() {
-    final String text = _name.text.trim();
-    _save(
-      (AppSettings s) => text.isEmpty
-          ? s.copyWith(syncDeviceName: '')
-          : s.copyWith(syncDeviceName: text),
-    );
-  }
-
-  void _commitPin() {
-    final String text = _pin.text.trim();
-    _save(
-      (AppSettings s) =>
-          text.isEmpty ? s.copyWith(clearSyncPin: true) : s.copyWith(syncPin: text),
-    );
-  }
-
-  String _lastSyncLabel(AppSettings settings) {
-    final int? at = settings.syncLastAt;
-    if (at == null) return '还没同步过';
-    final DateTime time = DateTime.fromMillisecondsSinceEpoch(at);
-    String two(int value) => value < 10 ? '0' + value.toString() : '$value';
-    return '上次同步：' +
-        time.year.toString() +
-        '-' +
-        two(time.month) +
-        '-' +
-        two(time.day) +
-        ' ' +
-        two(time.hour) +
-        ':' +
-        two(time.minute);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final AppSettings settings = ref.watch(currentSettingsProvider);
-    final ServerRuntime status = ref.watch(syncServerProvider);
-    final ThemeData theme = Theme.of(context);
-    final bool pinEmpty = (settings.syncPin ?? '').isEmpty;
-
-    return _Section(
-      title: '设备同步',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            '手机 ↔ 电脑、手机 ↔ 手机、电脑 ↔ 电脑都能同步：把两边的卡片、卡组、'
-            '答题记录整库合一份，再各自写回去。内容看「谁最后改的」，'
-            '学习进度看「谁最后复习的」，删除也会同步过去。',
-            style: theme.textTheme.bodySmall,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '两台设备要在同一个局域网里。同步是「我连对方」：只开一台的监听也能同步，'
-            '两台都开就能互相拉。Windows 第一次监听会弹防火墙提示，要允许。',
-            style: theme.textTheme.bodySmall,
-          ),
-          const SizedBox(height: 6),
-          SwitchListTile(
-            key: const Key('sync-server-enabled'),
-            contentPadding: EdgeInsets.zero,
-            title: const Text('在这台设备上监听'),
-            subtitle: Text(status.describe()),
-            value: settings.syncEnabled,
-            onChanged: (bool value) =>
-                _save((AppSettings s) => s.copyWith(syncEnabled: value)),
-          ),
-          if (settings.syncEnabled) ...<Widget>[
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 16,
-              runSpacing: 12,
-              children: <Widget>[
-                NumberField(
-                  fieldKey: const Key('sync-port'),
-                  label: '端口',
-                  value: settings.syncPort,
-                  min: AppSettings.minServerPort,
-                  max: AppSettings.maxServerPort,
-                  width: 150,
-                  onCommit: (int port) =>
-                      _save((AppSettings s) => s.copyWith(syncPort: port)),
-                ),
-                SizedBox(
-                  width: 240,
-                  child: TextField(
-                    key: const Key('sync-device-name'),
-                    controller: _name,
-                    decoration: const InputDecoration(
-                      labelText: '设备名',
-                      helperText: '对方界面上显示的名字，回车保存',
-                      isDense: true,
-                    ),
-                    onSubmitted: (_) => _commitName(),
-                    onTapOutside: (_) => _commitName(),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              key: const Key('sync-pin'),
-              controller: _pin,
-              decoration: InputDecoration(
-                labelText: '同步口令（两台填一样的，可留空）',
-                helperText: pinEmpty
-                    ? '留空 = 同一个局域网里谁都能连上来同步你的词库'
-                    : '对方要填同一个口令才连得上；回车保存',
-                prefixIcon: const Icon(Icons.password_outlined),
-              ),
-              onSubmitted: (_) => _commitPin(),
-              onTapOutside: (_) => _commitPin(),
-            ),
-            const SizedBox(height: 12),
-            FutureBuilder<List<String>>(
-              future: lanAddresses(),
-              builder: (
-                BuildContext context,
-                AsyncSnapshot<List<String>> snapshot,
-              ) {
-                final List<String> list = snapshot.data ?? const <String>[];
-                if (list.isEmpty) {
-                  return Text(
-                    '没找到局域网地址：这台设备现在没连 Wi-Fi / 网线。',
-                    style: theme.textTheme.bodySmall,
-                  );
-                }
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text('对方要填的地址（任选其一）：',
-                        style: theme.textTheme.bodySmall),
-                    for (final String ip in list)
-                      SelectableText(
-                        ip + ':' + settings.syncPort.toString(),
-                        style: theme.textTheme.titleMedium,
-                      ),
-                  ],
-                );
-              },
-            ),
-          ],
-          const SizedBox(height: 10),
-          Row(
-            children: <Widget>[
-              FilledButton.tonalIcon(
-                key: const Key('sync-open-page'),
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (BuildContext context) => const SyncPage(),
-                  ),
-                ),
-                icon: const Icon(Icons.sync),
-                label: const Text('打开同步页'),
-              ),
-              const SizedBox(width: 12),
-              Text(_lastSyncLabel(settings), style: theme.textTheme.bodySmall),
-            ],
-          ),
         ],
       ),
     );
