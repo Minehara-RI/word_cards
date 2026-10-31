@@ -14,6 +14,7 @@ import '../../domain/models/word_card.dart';
 import '../../state/providers.dart';
 import '../widgets/deck_picker.dart';
 import '../widgets/section_card.dart';
+import '../widgets/help_button.dart';
 import 'anki_import_page.dart';
 import 'card_list_page.dart';
 import 'import_page.dart';
@@ -83,8 +84,10 @@ class _AddPageState extends ConsumerState<AddPage> {
 
     try {
       final repository = ref.read(cardRepositoryProvider);
-      final WordCard? existing =
-          await repository.findByWord(word, deckId: deckId);
+      final WordCard? existing = await repository.findByWord(
+        word,
+        deckId: deckId,
+      );
       final DateTime now = DateTime.now();
       final List<String> distractors = await _resolveDistractors(
         parseDistractors(_distractors.text),
@@ -124,7 +127,9 @@ class _AddPageState extends ConsumerState<AddPage> {
       _clearForm();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(existing == null ? '已加入「' + word + '」' : '「' + word + '」已存在，已更新内容'),
+          content: Text(
+            existing == null ? '已加入「' + word + '」' : '「' + word + '」已存在，已更新内容',
+          ),
         ),
       );
     } catch (error) {
@@ -143,8 +148,9 @@ class _AddPageState extends ConsumerState<AddPage> {
     final List<String> result = <String>[...current];
     if (result.length >= WordCard.targetDistractorCount) return result;
 
-    final List<WordCard> cards =
-        await ref.read(cardRepositoryProvider).getAll(deckId: deckId);
+    final List<WordCard> cards = await ref
+        .read(cardRepositoryProvider)
+        .getAll(deckId: deckId);
     final String target = definition.trim();
     for (final WordCard card in cards) {
       if (result.length >= WordCard.targetDistractorCount) break;
@@ -166,8 +172,10 @@ class _AddPageState extends ConsumerState<AddPage> {
     }
     final AppSettings settings = ref.read(currentSettingsProvider);
     if (!settings.hasApiCredentials) {
-      _toast('AI 补全要先在设置页配好 API（地址、模型、密钥）。'
-          '这个功能只走 API，不提供复制 Prompt 到网页的做法。');
+      _toast(
+        'AI 补全要先在设置页配好 API（地址、模型、密钥）。'
+        '这个功能只走 API，不提供复制 Prompt 到网页的做法。',
+      );
       return;
     }
 
@@ -177,7 +185,9 @@ class _AddPageState extends ConsumerState<AddPage> {
     });
 
     try {
-      final outcome = await ref.read(cardCompletionServiceProvider).complete(
+      final outcome = await ref
+          .read(cardCompletionServiceProvider)
+          .complete(
             word: _word.text.trim(),
             definition: _definition.text.trim(),
             language: language,
@@ -193,8 +203,12 @@ class _AddPageState extends ConsumerState<AddPage> {
       // 花了 token 就记一笔，不管解析成没成（缓存命中不算）。
       if (!outcome.fromCache &&
           (outcome.promptTokens > 0 || outcome.completionTokens > 0)) {
-        await ref.read(settingsRepositoryProvider).save(
-              ref.read(currentSettingsProvider).addApiUsage(
+        await ref
+            .read(settingsRepositoryProvider)
+            .save(
+              ref
+                  .read(currentSettingsProvider)
+                  .addApiUsage(
                     calls: 1,
                     promptTokens: outcome.promptTokens,
                     completionTokens: outcome.completionTokens,
@@ -204,9 +218,11 @@ class _AddPageState extends ConsumerState<AddPage> {
 
       final AiApiFailure? failure = outcome.failure;
       if (failure != null) {
-        _toast(failure.hint == null
-            ? failure.message
-            : failure.message + '：' + failure.hint!);
+        _toast(
+          failure.hint == null
+              ? failure.message
+              : failure.message + '：' + failure.hint!,
+        );
         return;
       }
 
@@ -250,9 +266,11 @@ class _AddPageState extends ConsumerState<AddPage> {
       }
       if (!mounted) return;
       setState(() {});
-      _toast(filled.isEmpty
-          ? 'AI 没有带来新的补充（已经填过的一律保留）。'
-          : 'AI 补全完成：' + filled.join('、'));
+      _toast(
+        filled.isEmpty
+            ? 'AI 没有带来新的补充（已经填过的一律保留）。'
+            : 'AI 补全完成：' + filled.join('、'),
+      );
     } finally {
       if (mounted) setState(() => _completing = false);
     }
@@ -291,8 +309,7 @@ class _AddPageState extends ConsumerState<AddPage> {
     final List<String> knownTags = _knownTags(deckCards);
     final AppSettings settings = ref.watch(currentSettingsProvider);
     final ThemeData theme = Theme.of(context);
-    final CardLanguage language =
-        ref.watch(currentSettingsProvider).language;
+    final CardLanguage language = ref.watch(currentSettingsProvider).language;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
@@ -301,10 +318,11 @@ class _AddPageState extends ConsumerState<AddPage> {
         const SizedBox(height: 16),
         SectionCard(
           title: '手动添加一张卡片',
-          subtitle:
-              '单词和释义是必填，其它都可以留空；干扰项不够会自动从同一卡组补齐。',
-          trailing: Text('库里共 ' + total.toString() + ' 张',
-              style: theme.textTheme.labelMedium),
+          subtitle: '单词和释义是必填，其它都可以留空；干扰项不够会自动从同一卡组补齐。',
+          trailing: Text(
+            '库里共 ' + total.toString() + ' 张',
+            style: theme.textTheme.labelMedium,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
@@ -362,8 +380,7 @@ class _AddPageState extends ConsumerState<AddPage> {
               ),
               if (knownTags.isNotEmpty) ...<Widget>[
                 const SizedBox(height: 12),
-                Text('这个卡组里已有的标签（点一下加上）',
-                    style: theme.textTheme.labelSmall),
+                Text('这个卡组里已有的标签（点一下加上）', style: theme.textTheme.labelSmall),
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 8,
@@ -405,9 +422,7 @@ class _AddPageState extends ConsumerState<AddPage> {
                     label: Text(_completing ? '正在补全…' : 'AI 补全'),
                   ),
                   FilledButton.icon(
-                    onPressed: _saving
-                        ? null
-                        : () => _save(deckId, language),
+                    onPressed: _saving ? null : () => _save(deckId, language),
                     icon: _saving
                         ? const SizedBox(
                             width: 16,
@@ -417,7 +432,9 @@ class _AddPageState extends ConsumerState<AddPage> {
                         : const Icon(Icons.add),
                     label: Text(
                       selectedDeck == null
-                          ? '加入「' + (activeDeck?.name ?? Deck.defaultDeckName) + '」'
+                          ? '加入「' +
+                                (activeDeck?.name ?? Deck.defaultDeckName) +
+                                '」'
                           : '加入卡片',
                     ),
                   ),
@@ -440,7 +457,8 @@ class _AddPageState extends ConsumerState<AddPage> {
         ),
         SectionCard(
           title: '批量加入',
-          subtitle: '把 AI 生成的 JSON 粘进来，或者在同一页切到 API 直连让它自己生成；'
+          subtitle:
+              '把 AI 生成的 JSON 粘进来，或者在同一页切到 API 直连让它自己生成；'
               '批量导入时可以给整批词打同一个标签。',
           child: Wrap(
             spacing: 12,
@@ -465,9 +483,7 @@ class _AddPageState extends ConsumerState<AddPage> {
               ),
               OutlinedButton.icon(
                 onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const CardListPage(),
-                  ),
+                  MaterialPageRoute<void>(builder: (_) => const CardListPage()),
                 ),
                 icon: const Icon(Icons.list_alt_outlined),
                 label: Text('卡片管理（' + total.toString() + '）'),
@@ -475,6 +491,7 @@ class _AddPageState extends ConsumerState<AddPage> {
             ],
           ),
         ),
+        const HelpButton(topic: 'add'),
       ],
     );
   }

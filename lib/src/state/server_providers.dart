@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/server_ports.dart';
-import '../data/ai/card_completion.dart';
+import '../data/ai/card_filler.dart';
 import '../data/api/anki_connect_service.dart';
 import '../data/api/anki_connect_server.dart';
 import '../data/sync/sync_client.dart';
@@ -60,52 +60,16 @@ final ankiConnectServiceProvider = Provider<AnkiConnectService>((ref) {
 /// 不能让用户看到一张卡「加了一半」。
 Future<void> _completeInboundCard(Ref ref, WordCard card) async {
   try {
-    final AppSettings settings = await ref.read(settingsRepositoryProvider).load();
+    final AppSettings settings =
+        await ref.read(settingsRepositoryProvider).load();
     if (!settings.hasApiCredentials) return;
-    final CardCompletionOutcome outcome =
-        await ref.read(cardCompletionServiceProvider).complete(
-              word: card.word,
-              definition: card.definition,
-              language: card.language,
-              settings: settings,
-              existingDistractors: card.distractors,
-            );
-    final CardCompletion? completion = outcome.completion;
-    if (completion == null) return;
-
-    final WordCard? current =
-        await ref.read(cardRepositoryProvider).getById(card.id);
-    if (current == null) return;
-
-    WordCard next = current;
-    if (completion.phonetic != null && (next.phonetic ?? '').isEmpty) {
-      next = next.copyWith(phonetic: completion.phonetic);
-    }
-    if (completion.partOfSpeech != null && (next.partOfSpeech ?? '').isEmpty) {
-      next = next.copyWith(partOfSpeech: completion.partOfSpeech);
-    }
-    if (completion.example != null && (next.example ?? '').isEmpty) {
-      next = next.copyWith(example: completion.example);
-    }
-    if (completion.note != null && (next.note ?? '').isEmpty) {
-      next = next.copyWith(note: completion.note);
-    }
-    final List<String> distractors = <String>[...next.distractors];
-    for (final String item in completion.distractors) {
-      if (distractors.length >= WordCard.targetDistractorCount) break;
-      if (item == next.definition || distractors.contains(item)) continue;
-      distractors.add(item);
-    }
-    final List<String> tags = <String>[...next.tags];
-    if (distractors.length >= WordCard.targetDistractorCount) {
-      tags.remove(WordCard.incompleteTag);
-    }
-    next = next.copyWith(
-      distractors: distractors,
-      tags: tags,
-      updatedAt: DateTime.now(),
+    final CardFillOutcome outcome = await fillCardWithAi(
+      service: ref.read(cardCompletionServiceProvider),
+      settings: settings,
+      card: card,
     );
-    await ref.read(cardRepositoryProvider).upsert(next);
+    if (!outcome.ok || !outcome.changed) return;
+    await ref.read(cardRepositoryProvider).upsert(outcome.card);
     await ref.read(settingsRepositoryProvider).save(
           settings.addApiUsage(
             calls: 1,

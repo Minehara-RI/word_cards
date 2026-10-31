@@ -17,6 +17,7 @@ import '../../state/providers.dart';
 import '../../state/quiz_controller.dart';
 import '../widgets/deck_tag_filter.dart';
 import '../widgets/number_field.dart';
+import '../widgets/help_button.dart';
 import '../widgets/section_card.dart';
 import 'quiz_page.dart';
 
@@ -62,7 +63,9 @@ class StudyPage extends ConsumerWidget {
       } else {
         next.remove(deck.id);
       }
-      await update(ref.read(currentSettingsProvider).copyWith(quizDeckIds: next));
+      await update(
+        ref.read(currentSettingsProvider).copyWith(quizDeckIds: next),
+      );
     }
 
     Future<void> toggleTag(String tag, bool on) async {
@@ -71,7 +74,9 @@ class StudyPage extends ConsumerWidget {
       );
       TagMatchMode? asked;
       if (on) {
-        if (!next.any((String item) => item.toLowerCase() == tag.toLowerCase())) {
+        if (!next.any(
+          (String item) => item.toLowerCase() == tag.toLowerCase(),
+        )) {
           next.add(tag);
         }
         // 第一次勾标签才问「并集还是交集」，问过就不再打扰。
@@ -84,11 +89,13 @@ class StudyPage extends ConsumerWidget {
       if (!context.mounted) return;
       // 口径与筛选一次写进去：分两次写会读到旧设置。
       final AppSettings latest = ref.read(currentSettingsProvider);
-      await update(latest.copyWith(
-        studyTagFilter: next,
-        tagMatchMode: asked ?? latest.tagMatchMode,
-        tagMatchAsked: latest.tagMatchAsked || asked != null,
-      ));
+      await update(
+        latest.copyWith(
+          studyTagFilter: next,
+          tagMatchMode: asked ?? latest.tagMatchMode,
+          tagMatchAsked: latest.tagMatchAsked || asked != null,
+        ),
+      );
     }
 
     final List<Deck> selectableDecks = decks
@@ -103,7 +110,8 @@ class StudyPage extends ConsumerWidget {
       children: <Widget>[
         SectionCard(
           title: '学习概览',
-          subtitle: settings.overviewScope.description +
+          subtitle:
+              settings.overviewScope.description +
               (suspended.isNotEmpty
                   ? '（已挂起 ' + suspended.length.toString() + ' 个卡组）'
                   : ''),
@@ -164,8 +172,8 @@ class StudyPage extends ConsumerWidget {
                 total == 0
                     ? '还没有卡片，先去「加入」页加几张。'
                     : '掌握进度 ' +
-                        (stats.masteryRatio * 100).round().toString() +
-                        '%（答完题会自动更新掌握度）',
+                          (stats.masteryRatio * 100).round().toString() +
+                          '%（答完题会自动更新掌握度）',
                 style: theme.textTheme.bodySmall,
               ),
             ],
@@ -173,7 +181,8 @@ class StudyPage extends ConsumerWidget {
         ),
         SectionCard(
           title: '本轮筛选',
-          subtitle: '卡组多选取并集；标签按设置里的口径取并集或交集。'
+          subtitle:
+              '卡组多选取并集；标签按设置里的口径取并集或交集。'
               '两套复习算法都按这个范围出题。',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -196,14 +205,18 @@ class StudyPage extends ConsumerWidget {
               const SizedBox(height: 4),
               Text(
                 settings.quizDeckIds.isEmpty
-                    ? '不勾卡组时跟随「当前卡组」：' + currentDeckName + '。'
-                        '已挂起的卡组不出现在这里。'
-                    : '已选 ' + settings.quizDeckIds.length.toString() +
-                        ' 个卡组，取并集。' +
-                        (selectedSuspendedCount > 0
-                            ? '其中 ' + selectedSuspendedCount.toString() +
-                                ' 个已挂起，已自动排除。'
-                            : ''),
+                    ? '不勾卡组时跟随「当前卡组」：' +
+                          currentDeckName +
+                          '。'
+                              '已挂起的卡组不出现在这里。'
+                    : '已选 ' +
+                          settings.quizDeckIds.length.toString() +
+                          ' 个卡组，取并集。' +
+                          (selectedSuspendedCount > 0
+                              ? '其中 ' +
+                                    selectedSuspendedCount.toString() +
+                                    ' 个已挂起，已自动排除。'
+                              : ''),
                 style: theme.textTheme.bodySmall,
               ),
               const SizedBox(height: 8),
@@ -278,7 +291,8 @@ class StudyPage extends ConsumerWidget {
                   for (final int count in <int>[5, 10, 20])
                     ChoiceChip(
                       label: Text(count.toString() + ' 题'),
-                      selected: !settings.quizAllQuestions &&
+                      selected:
+                          !settings.quizAllQuestions &&
                           settings.quizQuestionCount == count,
                       onSelected: (_) =>
                           update(settings.copyWith(quizQuestionCount: count)),
@@ -333,9 +347,8 @@ class StudyPage extends ConsumerWidget {
                     ChoiceChip(
                       label: Text(direction.labelFor(settings.language)),
                       selected: settings.quizDirection == direction,
-                      onSelected: (_) => update(
-                        settings.copyWith(quizDirection: direction),
-                      ),
+                      onSelected: (_) =>
+                          update(settings.copyWith(quizDirection: direction)),
                     ),
                 ],
               ),
@@ -374,9 +387,9 @@ class StudyPage extends ConsumerWidget {
                     .map(
                       (AnswerRevealMode mode) =>
                           ButtonSegment<AnswerRevealMode>(
-                        value: mode,
-                        label: Text(mode.label),
-                      ),
+                            value: mode,
+                            label: Text(mode.label),
+                          ),
                     )
                     .toList(growable: false),
                 selected: <AnswerRevealMode>{settings.answerRevealMode},
@@ -411,18 +424,17 @@ class StudyPage extends ConsumerWidget {
                   settings: settings,
                   deckTotal: scope.deckCards.length,
                   dueCount: dueCount,
-                  onRetention: (double value) => update(
-                    settings.copyWith(fsrsDesiredRetention: value),
-                  ),
+                  onRetention: (double value) =>
+                      update(settings.copyWith(fsrsDesiredRetention: value)),
                 ),
               ],
               const SizedBox(height: 10),
               Text(
                 settings.usesFsrs
                     ? '两套算法互不干扰：FSRS 的记忆状态单独存，'
-                        '换回「原有算法」时掌握度、正确率还是原来那份数据。'
+                          '换回「原有算法」时掌握度、正确率还是原来那份数据。'
                     : '当前用原有算法：按正确率与掌握度挑词。'
-                        '切到 FSRS-6 会用记忆状态安排复习，原有数据不受影响。',
+                          '切到 FSRS-6 会用记忆状态安排复习，原有数据不受影响。',
                 style: theme.textTheme.bodySmall,
               ),
             ],
@@ -446,13 +458,14 @@ class StudyPage extends ConsumerWidget {
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
-                  onPressed: (total == 0 ||
+                  onPressed:
+                      (total == 0 ||
                           poolEmpty ||
                           (settings.usesFsrs && dueCount == 0))
                       ? null
                       : () => settings.usesFsrs
-                          ? _startDue(context, ref)
-                          : _startWeakest(context, ref),
+                            ? _startDue(context, ref)
+                            : _startWeakest(context, ref),
                   icon: Icon(
                     settings.usesFsrs
                         ? Icons.event_available_outlined
@@ -484,6 +497,7 @@ class StudyPage extends ConsumerWidget {
             ],
           ),
         ),
+        const HelpButton(topic: 'study'),
       ],
     );
   }
@@ -493,13 +507,17 @@ class StudyPage extends ConsumerWidget {
 
     if (settings.usesFsrs) {
       // FSRS 模式：候选池已经按卡组/标签筛过，这里只按「最可能忘」排序。
-      final List<WordCard> ordered =
-          ref.read(fsrsQueueProvider).map((FsrsQueueItem item) => item.card).toList();
+      final List<WordCard> ordered = ref
+          .read(fsrsQueueProvider)
+          .map((FsrsQueueItem item) => item.card)
+          .toList();
       if (ordered.isEmpty) {
         _toast(context, '本轮筛选范围里没有可复习的词。');
         return;
       }
-      await ref.read(quizControllerProvider.notifier).startWithCards(
+      await ref
+          .read(quizControllerProvider.notifier)
+          .startWithCards(
             ordered,
             questionCount: settings.quizQuestionCount,
             shuffle: false,
@@ -515,7 +533,9 @@ class StudyPage extends ConsumerWidget {
         );
         return;
       }
-      await ref.read(quizControllerProvider.notifier).startWithCards(
+      await ref
+          .read(quizControllerProvider.notifier)
+          .startWithCards(
             pool,
             questionCount: settings.quizQuestionCount,
             shuffle: true,
@@ -527,9 +547,8 @@ class StudyPage extends ConsumerWidget {
       _toast(context, '当前没有可用的卡片，请先导入。');
       return;
     }
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const QuizPage()),
-    );
+    await Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => const QuizPage()));
   }
 
   /// FSRS 模式：只做今天到期的（含从没学过的新词）。
@@ -546,23 +565,25 @@ class StudyPage extends ConsumerWidget {
       return;
     }
 
-    await ref.read(quizControllerProvider.notifier).startWithCards(
+    await ref
+        .read(quizControllerProvider.notifier)
+        .startWithCards(
           due,
           questionCount: settings.quizQuestionCount,
           shuffle: false,
         );
     if (!context.mounted) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const QuizPage()),
-    );
+    await Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => const QuizPage()));
   }
 
   /// 从答题记录里挑出正确率最低的词重练（原有算法那条路）。
   static Future<void> _startWeakest(BuildContext context, WidgetRef ref) async {
     // 用同一份候选池：卡组与标签筛选对「只练做错的词」也生效。
     final List<WordCard> cards = ref.read(studyPoolProvider);
-    final List<AnswerRecord> records =
-        await ref.read(answerRecordRepositoryProvider).getAll();
+    final List<AnswerRecord> records = await ref
+        .read(answerRecordRepositoryProvider)
+        .getAll();
     final StatsBreakdown breakdown = computeBreakdown(
       cards: cards,
       records: records,
@@ -580,15 +601,12 @@ class StudyPage extends ConsumerWidget {
       return;
     }
 
-    await ref.read(quizControllerProvider.notifier).startWithCards(
-          weak,
-          shuffle: false,
-          mode: QuizMode.review,
-        );
+    await ref
+        .read(quizControllerProvider.notifier)
+        .startWithCards(weak, shuffle: false, mode: QuizMode.review);
     if (!context.mounted) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const QuizPage()),
-    );
+    await Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => const QuizPage()));
   }
 
   static void _toast(BuildContext context, String message) {
@@ -676,7 +694,11 @@ class _FsrsPanel extends StatelessWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
-              Icon(Icons.insights_outlined, size: 18, color: theme.colorScheme.primary),
+              Icon(
+                Icons.insights_outlined,
+                size: 18,
+                color: theme.colorScheme.primary,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -685,8 +707,9 @@ class _FsrsPanel extends StatelessWidget {
                       ' 个词，今天该复习 ' +
                       dueCount.toString() +
                       ' 个',
-                  style: theme.textTheme.titleSmall
-                      ?.copyWith(fontWeight: FontWeight.w600),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],

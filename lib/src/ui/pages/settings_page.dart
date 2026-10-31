@@ -17,6 +17,7 @@ import '../../state/server_providers.dart';
 import '../fonts.dart';
 import '../platform_target.dart';
 import '../widgets/deck_picker.dart';
+import '../widgets/help_button.dart';
 import '../widgets/number_field.dart';
 
 /// 设置页只放「全局的、跟一次答题无关的」东西：
@@ -74,10 +75,7 @@ class SettingsPage extends ConsumerWidget {
                     const SizedBox(height: 18),
                     // 手机端没有课堂投影，演示模式这一套设置也就没有意义。
                     if (isDesktop) ...<Widget>[
-                      Text(
-                        '演示模式（全屏投影）',
-                        style: theme.textTheme.labelLarge,
-                      ),
+                      Text('演示模式（全屏投影）', style: theme.textTheme.labelLarge),
                       const SizedBox(height: 4),
                       Text(
                         '演示时的底色单独设置，和主界面互不影响：'
@@ -88,19 +86,20 @@ class SettingsPage extends ConsumerWidget {
                       SegmentedButton<AppThemeMode>(
                         segments: AppThemeMode.values
                             .map(
-                              (AppThemeMode mode) => ButtonSegment<AppThemeMode>(
-                                value: mode,
-                                label: Text(mode.label),
-                              ),
+                              (AppThemeMode mode) =>
+                                  ButtonSegment<AppThemeMode>(
+                                    value: mode,
+                                    label: Text(mode.label),
+                                  ),
                             )
                             .toList(growable: false),
                         selected: <AppThemeMode>{settings.projectionThemeMode},
                         onSelectionChanged: (Set<AppThemeMode> selection) =>
                             update(
-                          settings.copyWith(
-                            projectionThemeMode: selection.first,
-                          ),
-                        ),
+                              settings.copyWith(
+                                projectionThemeMode: selection.first,
+                              ),
+                            ),
                       ),
                       const SizedBox(height: 18),
                     ],
@@ -115,8 +114,8 @@ class SettingsPage extends ConsumerWidget {
                       min: 0.8,
                       max: 1.4,
                       divisions: 6,
-                      label: (settings.fontScale * 100).round().toString() +
-                          '%',
+                      label:
+                          (settings.fontScale * 100).round().toString() + '%',
                       onChanged: (double value) =>
                           update(settings.copyWith(fontScale: value)),
                     ),
@@ -179,12 +178,13 @@ class SettingsPage extends ConsumerWidget {
                           )
                           .toList(growable: false),
                       selected: <TagMatchMode>{settings.tagMatchMode},
-                      onSelectionChanged: (Set<TagMatchMode> selection) => update(
-                        settings.copyWith(
-                          tagMatchMode: selection.first,
-                          tagMatchAsked: true,
-                        ),
-                      ),
+                      onSelectionChanged: (Set<TagMatchMode> selection) =>
+                          update(
+                            settings.copyWith(
+                              tagMatchMode: selection.first,
+                              tagMatchAsked: true,
+                            ),
+                          ),
                     ),
                     const SizedBox(height: 6),
                     Text(
@@ -216,9 +216,8 @@ class SettingsPage extends ConsumerWidget {
                             (CardLanguage language) => ChoiceChip(
                               label: Text(language.displayName),
                               selected: settings.language == language,
-                              onSelected: (_) => update(
-                                settings.copyWith(language: language),
-                              ),
+                              onSelected: (_) =>
+                                  update(settings.copyWith(language: language)),
                             ),
                           )
                           .toList(growable: false),
@@ -239,16 +238,16 @@ class SettingsPage extends ConsumerWidget {
                           .map(
                             (PhoneticAccent accent) =>
                                 ButtonSegment<PhoneticAccent>(
-                              value: accent,
-                              label: Text(accent.label),
-                            ),
+                                  value: accent,
+                                  label: Text(accent.label),
+                                ),
                           )
                           .toList(growable: false),
                       selected: <PhoneticAccent>{settings.phoneticAccent},
                       onSelectionChanged: (Set<PhoneticAccent> selection) =>
                           update(
-                        settings.copyWith(phoneticAccent: selection.first),
-                      ),
+                            settings.copyWith(phoneticAccent: selection.first),
+                          ),
                     ),
                     const SizedBox(height: 6),
                     Text(
@@ -271,7 +270,7 @@ class SettingsPage extends ConsumerWidget {
                 ),
               ),
               const _ApiSection(),
-              const _AnkiConnectSection(),
+              _AnkiConnectSection(target: target),
               _Section(
                 title: '数据',
                 child: Column(
@@ -301,8 +300,8 @@ class SettingsPage extends ConsumerWidget {
                   'word_flashcards ' +
                       kAppVersion +
                       '\n'
-                  '所有卡片、答题记录与配置都只保存在这台设备上，'
-                  '不联网、不上传、不需要账号。',
+                          '所有卡片、答题记录与配置都只保存在这台设备上，'
+                          '不联网、不上传、不需要账号。',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
@@ -314,8 +313,11 @@ class SettingsPage extends ConsumerWidget {
   }
 
   Future<void> _clearCards(BuildContext context, WidgetRef ref) async {
-    final bool ok =
-        await confirmDangerous(context, '清空全部卡片？', '所有卡片和答题记录都会被删除。');
+    final bool ok = await confirmDangerous(
+      context,
+      '清空全部卡片？',
+      '所有卡片和答题记录都会被删除。',
+    );
     if (!ok) return;
     await ref.read(cardRepositoryProvider).deleteAll();
     await ref.read(answerRecordRepositoryProvider).deleteAll();
@@ -327,10 +329,10 @@ class SettingsPage extends ConsumerWidget {
 
   Future<void> _clearRecords(BuildContext context, WidgetRef ref) async {
     final bool ok = await confirmDangerous(
-        context,
-        '清空答题记录？',
-        '卡片会保留，但练习次数与掌握度会被重置。',
-      );
+      context,
+      '清空答题记录？',
+      '卡片会保留，但练习次数与掌握度会被重置。',
+    );
     if (!ok) return;
     await ref.read(answerRecordRepositoryProvider).deleteAll();
     ref.invalidate(statsProvider);
@@ -338,7 +340,6 @@ class SettingsPage extends ConsumerWidget {
     ScaffoldMessenger.of(context)
         .showSnackBar(const SnackBar(content: Text('已清空答题记录')));
   }
-
 }
 
 /// 危险操作的二次确认：红按钮 + 「确定 / 取消」。
@@ -405,8 +406,9 @@ class _DeckManager extends ConsumerWidget {
     List<WordCard> cards,
     String? selected,
   ) {
-    final int count =
-        cards.where((WordCard card) => card.deckId == deck.id).length;
+    final int count = cards
+        .where((WordCard card) => card.deckId == deck.id)
+        .length;
     final bool isDefault = deck.id == Deck.defaultDeckId;
     final ButtonStyle compact = TextButton.styleFrom(
       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -422,8 +424,8 @@ class _DeckManager extends ConsumerWidget {
         deck.suspended
             ? Icons.pause_circle_outline
             : (selected == deck.id
-                ? Icons.radio_button_checked
-                : Icons.style_outlined),
+                  ? Icons.radio_button_checked
+                  : Icons.style_outlined),
         size: 18,
         color: deck.suspended ? theme.colorScheme.outline : null,
       ),
@@ -450,8 +452,9 @@ class _DeckManager extends ConsumerWidget {
           TextButton(
             key: Key('deck-reset-' + deck.id),
             style: compact,
-            onPressed:
-                count == 0 ? null : () => _resetDeck(context, ref, deck, count),
+            onPressed: count == 0
+                ? null
+                : () => _resetDeck(context, ref, deck, count),
             child: const Text('重置'),
           ),
           if (!isDefault)
@@ -481,9 +484,9 @@ class _DeckManager extends ConsumerWidget {
     Deck deck,
   ) async {
     final bool next = !deck.suspended;
-    await ref.read(deckRepositoryProvider).upsert(
-          deck.copyWith(suspended: next),
-        );
+    await ref
+        .read(deckRepositoryProvider)
+        .upsert(deck.copyWith(suspended: next));
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -505,16 +508,17 @@ class _DeckManager extends ConsumerWidget {
     final bool ok = await confirmDangerous(
       context,
       '重置「' + deck.name + '」？',
-      '这个词库里的 ' + count.toString() + ' 个词会保留，但复习次数、掌握度、'
-          '答题记录和 FSRS 进度全部清零，不能恢复。',
+      '这个词库里的 ' +
+          count.toString() +
+          ' 个词会保留，但复习次数、掌握度、'
+              '答题记录和 FSRS 进度全部清零，不能恢复。',
     );
     if (!ok) return;
     await ref.read(cardRepositoryProvider).resetProgress(deckId: deck.id);
     ref.invalidate(statsProvider);
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('已重置「' + deck.name + '」')),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('已重置「' + deck.name + '」')));
   }
 
   Future<void> _deleteDeck(
@@ -538,9 +542,8 @@ class _DeckManager extends ConsumerWidget {
     }
     ref.invalidate(statsProvider);
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('已删除「' + deck.name + '」')),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('已删除「' + deck.name + '」')));
   }
 }
 
@@ -562,9 +565,7 @@ class _Section extends StatelessWidget {
             children: <Widget>[
               Text(
                 title,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
+                style: Theme.of(context).textTheme.titleMedium
                     ?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 12),
@@ -576,7 +577,6 @@ class _Section extends StatelessWidget {
     );
   }
 }
-
 
 /// 「AI 生成（模式 B：API 直连）」这一块。
 ///
@@ -639,10 +639,8 @@ class _ApiSectionState extends ConsumerState<_ApiSection> {
       _testFailure = null;
     });
     _save(
-      (AppSettings s) => s.copyWith(
-        apiBaseUrl: provider.baseUrl,
-        apiModel: provider.model,
-      ),
+      (AppSettings s) =>
+          s.copyWith(apiBaseUrl: provider.baseUrl, apiModel: provider.model),
     );
   }
 
@@ -679,8 +677,12 @@ class _ApiSectionState extends ConsumerState<_ApiSection> {
       final String reply = completion.content.trim().split('\n').first;
       setState(() {
         _testing = false;
-        _testOk = '连接正常：' + watch.elapsedMilliseconds.toString() +
-            ' 毫秒，模型回了「' + reply + '」';
+        _testOk =
+            '连接正常：' +
+            watch.elapsedMilliseconds.toString() +
+            ' 毫秒，模型回了「' +
+            reply +
+            '」';
       });
     } on AiApiFailure catch (failure) {
       if (!mounted) return;
@@ -815,9 +817,8 @@ class _ApiSectionState extends ConsumerState<_ApiSection> {
                 max: AppSettings.maxApiCacheHours,
                 width: 220,
                 helper: '0 = 不缓存；相同 Prompt 在缓存期内不重复请求',
-                onCommit: (int value) => _save(
-                  (AppSettings s) => s.copyWith(apiCacheHours: value),
-                ),
+                onCommit: (int value) =>
+                    _save((AppSettings s) => s.copyWith(apiCacheHours: value)),
               ),
             ],
           ),
@@ -863,17 +864,24 @@ class _ApiSectionState extends ConsumerState<_ApiSection> {
             ),
           ],
           const SizedBox(height: 16),
-          Text('用量（只统计这台设备，按每 100 万 token 约 1 美元估算）',
-              style: theme.textTheme.labelMedium),
+          Text(
+            '用量（只统计这台设备，按每 100 万 token 约 1 美元估算）',
+            style: theme.textTheme.labelMedium,
+          ),
           const SizedBox(height: 6),
           Row(
             children: <Widget>[
               Expanded(
                 child: Text(
-                  '调用 ' + settings.apiCallCount.toString() + ' 次 · 输入 ' +
-                      settings.apiPromptTokens.toString() + ' · 输出 ' +
-                      settings.apiCompletionTokens.toString() + ' tokens · 约 ' +
-                      settings.estimatedCostUsd.toStringAsFixed(4) + ' 美元',
+                  '调用 ' +
+                      settings.apiCallCount.toString() +
+                      ' 次 · 输入 ' +
+                      settings.apiPromptTokens.toString() +
+                      ' · 输出 ' +
+                      settings.apiCompletionTokens.toString() +
+                      ' tokens · 约 ' +
+                      settings.estimatedCostUsd.toStringAsFixed(4) +
+                      ' 美元',
                   style: theme.textTheme.bodySmall,
                 ),
               ),
@@ -915,7 +923,10 @@ class _ApiNotice extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text(title, style: theme.textTheme.bodySmall?.copyWith(color: color)),
+              Text(
+                title,
+                style: theme.textTheme.bodySmall?.copyWith(color: color),
+              ),
               if (detail != null)
                 Text(detail!, style: theme.textTheme.bodySmall),
             ],
@@ -934,7 +945,10 @@ String get kDefaultDeckLabel => Deck.defaultDeckName;
 /// 它和上面的「AI 生成」是反方向：AI 生成是本应用去调别人，
 /// 这里是被别人调 —— Yomitan、脚本、AI agent 把词直接写进来。
 class _AnkiConnectSection extends ConsumerStatefulWidget {
-  const _AnkiConnectSection();
+  const _AnkiConnectSection({this.target});
+
+  /// 用哪个平台的样子画；决定要不要显示「说明」按钮。
+  final PlatformTarget? target;
 
   @override
   ConsumerState<_AnkiConnectSection> createState() =>
@@ -989,9 +1003,8 @@ class _AnkiConnectSectionState extends ConsumerState<_AnkiConnectSection> {
     final bool keyEmpty = (settings.apiServerKey ?? '').isEmpty;
     // 锁定的卡组可能已经被删掉：这时下拉框要退回「跟随客户端」，
     // 否则 DropdownButton 会因为当前值不在候选项里直接抛断言。
-    final String selectedDeckId = decks.any(
-      (Deck deck) => deck.id == settings.apiServerDeckId,
-    )
+    final String selectedDeckId =
+        decks.any((Deck deck) => deck.id == settings.apiServerDeckId)
         ? settings.apiServerDeckId!
         : '';
 
@@ -1026,10 +1039,7 @@ class _AnkiConnectSectionState extends ConsumerState<_AnkiConnectSection> {
             const SizedBox(height: 6),
             Row(
               children: <Widget>[
-                Text(
-                  '端口固定 $kApiServerPort',
-                  style: theme.textTheme.labelLarge,
-                ),
+                Text('端口固定 $kApiServerPort', style: theme.textTheme.labelLarge),
                 const SizedBox(width: 12),
                 OutlinedButton.icon(
                   onPressed: () => _copy(url),
@@ -1118,6 +1128,9 @@ class _AnkiConnectSectionState extends ConsumerState<_AnkiConnectSection> {
               ),
             ),
           ],
+          // 设置页里只有这一节配了「说明」：外部写入的配置项最绕，
+          // 其余小节都是看一眼就懂的开关。
+          HelpButton(topic: 'anki', target: widget.target, compact: true),
         ],
       ),
     );

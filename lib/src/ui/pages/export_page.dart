@@ -12,6 +12,7 @@ import '../../domain/models/word_card.dart';
 import '../../state/providers.dart';
 import '../widgets/section_card.dart';
 import '../widgets/sync_panel.dart';
+import '../widgets/help_button.dart';
 
 /// 「导出与同步」页：导出文件（卡片 JSON / 答题 CSV / Anki 库）+ 局域网设备同步。
 ///
@@ -45,16 +46,19 @@ class _ExportPageState extends ConsumerState<ExportPage> {
   }
 
   Future<void> _exportCards() async {
-    final List<WordCard> cards =
-        await ref.read(cardRepositoryProvider).getAll();
+    final List<WordCard> cards = await ref
+        .read(cardRepositoryProvider)
+        .getAll();
     await _run(() => ref.read(exportServiceProvider).exportCardsJson(cards));
   }
 
   Future<void> _exportRecords() async {
-    final List<WordCard> cards =
-        await ref.read(cardRepositoryProvider).getAll();
-    final List<AnswerRecord> records =
-        await ref.read(answerRecordRepositoryProvider).getAll();
+    final List<WordCard> cards = await ref
+        .read(cardRepositoryProvider)
+        .getAll();
+    final List<AnswerRecord> records = await ref
+        .read(answerRecordRepositoryProvider)
+        .getAll();
     await _run(
       () => ref
           .read(exportServiceProvider)
@@ -66,32 +70,33 @@ class _ExportPageState extends ConsumerState<ExportPage> {
       _run(() => ref.read(exportServiceProvider).exportAnkiCollection());
 
   Future<void> _copyJson() async {
-    final List<WordCard> cards =
-        await ref.read(cardRepositoryProvider).getAll();
+    final List<WordCard> cards = await ref
+        .read(cardRepositoryProvider)
+        .getAll();
     final String text = cards
-        .map((WordCard card) => <String, Object?>{
-              'word': card.word,
-              'definition': card.definition,
-              'phonetic': card.phonetic,
-              'example': card.example,
-              'part_of_speech': card.partOfSpeech,
-              'note': card.note,
-              'distractors': card.distractors,
-            })
+        .map(
+          (WordCard card) => <String, Object?>{
+            'word': card.word,
+            'definition': card.definition,
+            'phonetic': card.phonetic,
+            'example': card.example,
+            'part_of_speech': card.partOfSpeech,
+            'note': card.note,
+            'distractors': card.distractors,
+          },
+        )
         .toList()
         .toString();
     await Clipboard.setData(ClipboardData(text: text));
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('卡片内容已复制到剪贴板。')),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('卡片内容已复制到剪贴板。')));
   }
 
   @override
   Widget build(BuildContext context) {
     final int total = ref.watch(allCardsProvider).value?.length ?? 0;
-    final int records =
-        ref.watch(recentRecordsProvider).value?.length ?? 0;
+    final int records = ref.watch(recentRecordsProvider).value?.length ?? 0;
     final AnkiCollection? collection = ref.watch(ankiCollectionProvider);
     final ThemeData theme = Theme.of(context);
 
@@ -140,10 +145,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
               ),
               if (_error != null) ...<Widget>[
                 const SizedBox(height: 14),
-                Text(
-                  _error!,
-                  style: TextStyle(color: theme.colorScheme.error),
-                ),
+                Text(_error!, style: TextStyle(color: theme.colorScheme.error)),
               ],
               if (_last != null) ...<Widget>[
                 const SizedBox(height: 16),
@@ -226,6 +228,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
             ],
           ),
         ),
+        const HelpButton(topic: 'export'),
       ],
     );
   }

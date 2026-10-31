@@ -10,6 +10,7 @@ import '../../logic/stats.dart';
 import '../../logic/stats_breakdown.dart';
 import '../../state/providers.dart';
 import '../widgets/section_card.dart';
+import '../widgets/help_button.dart';
 
 /// 「统计」页：掌握度分布、最近七天的量、最需要加强的词、最近答题。
 class StatsPage extends ConsumerWidget {
@@ -20,17 +21,16 @@ class StatsPage extends ConsumerWidget {
     final StudyStats stats = ref.watch(statsProvider).value ?? StudyStats.empty;
     final StatsBreakdown breakdown =
         ref.watch(statsBreakdownProvider).value ?? StatsBreakdown.empty;
-    final List<WordCard> cards = ref.watch(allCardsProvider).value ?? const <WordCard>[];
+    final List<WordCard> cards =
+        ref.watch(allCardsProvider).value ?? const <WordCard>[];
     final ThemeData theme = Theme.of(context);
 
     if (breakdown.totalCards == 0) {
       return ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: <Widget>[
-          const SectionCard(
-            title: '统计',
-            child: Text('还没有卡片，加入几张再回来看统计。'),
-          ),
+          const SectionCard(title: '统计', child: Text('还没有卡片，加入几张再回来看统计。')),
+          const HelpButton(topic: 'stats'),
         ],
       );
     }
@@ -58,9 +58,10 @@ class StatsPage extends ConsumerWidget {
                     label: '平均反应',
                     value: breakdown.averageReactionMs == 0
                         ? '--'
-                        : (breakdown.averageReactionMs / 1000)
-                                .toStringAsFixed(1) +
-                            ' 秒',
+                        : (breakdown.averageReactionMs / 1000).toStringAsFixed(
+                                1,
+                              ) +
+                              ' 秒',
                   ),
                 ],
               ),
@@ -132,6 +133,7 @@ class StatsPage extends ConsumerWidget {
                   ],
                 ),
         ),
+        const HelpButton(topic: 'stats'),
       ],
     );
   }
@@ -155,7 +157,10 @@ class _DistributionBar extends StatelessWidget {
     final ThemeData theme = Theme.of(context);
     return Row(
       children: <Widget>[
-        SizedBox(width: 84, child: Text(label, style: theme.textTheme.bodyMedium)),
+        SizedBox(
+          width: 84,
+          child: Text(label, style: theme.textTheme.bodyMedium),
+        ),
         Expanded(
           child: ClipRRect(
             borderRadius: BorderRadius.circular(6),
@@ -171,10 +176,7 @@ class _DistributionBar extends StatelessWidget {
         SizedBox(
           width: 96,
           child: Text(
-            count.toString() +
-                ' 张 · ' +
-                (ratio * 100).round().toString() +
-                '%',
+            count.toString() + ' 张 · ' + (ratio * 100).round().toString() + '%',
             textAlign: TextAlign.right,
             style: theme.textTheme.labelMedium,
           ),
@@ -189,7 +191,15 @@ class _WeeklyChart extends StatelessWidget {
 
   final List<DailyAnswers> daily;
 
-  static const List<String> _weekdays = <String>['一', '二', '三', '四', '五', '六', '日'];
+  static const List<String> _weekdays = <String>[
+    '一',
+    '二',
+    '三',
+    '四',
+    '五',
+    '六',
+    '日',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -226,8 +236,9 @@ class _WeeklyChart extends StatelessWidget {
                         child: Container(
                           width: 22,
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.primary
-                                .withValues(alpha: 0.85),
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: 0.85,
+                            ),
                             borderRadius: BorderRadius.circular(4),
                           ),
                         ),
@@ -268,8 +279,9 @@ class _WeakRow extends StatelessWidget {
           Expanded(
             child: Text(
               item.card.word,
-              style: theme.textTheme.bodyLarge
-                  ?.copyWith(fontWeight: FontWeight.w600),
+              style: theme.textTheme.bodyLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           Expanded(
@@ -282,8 +294,12 @@ class _WeakRow extends StatelessWidget {
             ),
           ),
           Text(
-            percent.toString() + '%（' +
-                item.correct.toString() + '/' + item.attempts.toString() + '）',
+            percent.toString() +
+                '%（' +
+                item.correct.toString() +
+                '/' +
+                item.attempts.toString() +
+                '）',
             style: theme.textTheme.labelMedium?.copyWith(
               color: percent < 60 ? theme.colorScheme.error : null,
             ),
@@ -310,7 +326,8 @@ class _RecentRow extends StatelessWidget {
         break;
       }
     }
-    String time = record.answeredAt.month.toString() +
+    String time =
+        record.answeredAt.month.toString() +
         '/' +
         record.answeredAt.day.toString() +
         ' ' +
@@ -333,8 +350,9 @@ class _RecentRow extends StatelessWidget {
           Expanded(
             child: Text(
               word,
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(fontWeight: FontWeight.w600),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           if (record.timedOut)
